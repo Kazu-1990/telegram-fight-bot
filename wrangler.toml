@@ -7,7 +7,7 @@ compatibility_date = "2025-01-01"
 [[d1_databases]]
 binding = "DB"                     # همون env.DB که توی کد استفاده شده
 database_name = "fight-bot-db"      # با: wrangler d1 create fight-bot-db
-database_id = "CHANGE_ME"           # خروجی دستور بالا رو اینجا بذار
+database_id = "7d9fef2f-fa64-4a47-871d-fbe3167ad554"           # خروجی دستور بالا رو اینجا بذار
 
 # ایمپورت کردن فایل‌های html به‌صورت رشته‌ی متنی (برای src/webapp/*/index.html)
 [[rules]]
