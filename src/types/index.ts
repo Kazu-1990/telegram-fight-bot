@@ -1,5 +1,8 @@
 import type { House, Race, PotionKey, ResourceKey, DeathDuelChoice } from "../config/constants";
 
+// چند فایل دیگه (players.ts، engine.ts، duel/api.ts) این تایپ‌ها رو از همینجا میگیرن
+export type { House, Race, PotionKey, ResourceKey, DeathDuelChoice };
+
 // =========================================================
 // موجودیت‌های اصلی دیتابیس
 // =========================================================
