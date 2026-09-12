@@ -11,6 +11,7 @@ import * as profile from "./commands/profile";
 import * as leaderboard from "./commands/leaderboard";
 import * as staff from "./commands/staff";
 import * as hint from "./commands/hint";
+import { normalizePersianText } from "./shared/text";
 
 import { handleDuelApiRequest } from "../webapp/duel/routes";
 import { handlePveApiRequest } from "../webapp/pve/routes";
@@ -59,18 +60,25 @@ function buildBot(env: Env): Bot<Context> {
   bot.command("duel", (ctx) => duel.handleDuelCommand(ctx, db));
   bot.callbackQuery(/^duel_join:\d+$/, (ctx) => duel.handleDuelJoinCallback(ctx, db));
   bot.callbackQuery(/^duel_cancel:\d+$/, (ctx) => duel.handleDuelCancelCallback(ctx, db));
-  bot.callbackQuery(/^duel_result:\d+$/, (ctx) => duel.handleDuelResultCallback(ctx, db));
 
   // ---------- forest / dungeon / shop / profile / hint ----------
   bot.command("forest", (ctx) => forest.handleForestCommand(ctx, db));
+  bot.callbackQuery("forest_enter", (ctx) => forest.handleForestEnterCallback(ctx, db));
   bot.command("dungeon", (ctx) => dungeon.handleDungeonCommand(ctx, db));
+  bot.callbackQuery("dungeon_enter", (ctx) => dungeon.handleDungeonEnterCallback(ctx, db));
   bot.command("shop", (ctx) => shop.handleShopCommand(ctx, db));
+  bot.callbackQuery("shop_enter", (ctx) => shop.handleShopEnterCallback(ctx, db));
   bot.command("profile", (ctx) => profile.handleProfileCommand(ctx, db));
   bot.command("hint", (ctx) => hint.handleHintCommand(ctx, db));
 
   // ---------- جدول امتیازات (فارسی + معادل انگلیسی /leaderboard) ----------
   bot.command("leaderboard", (ctx) => leaderboard.handleLeaderboardCommand(ctx, db));
-  bot.hears("جدول امتیازات", (ctx) => leaderboard.handleLeaderboardCommand(ctx, db));
+  bot.on("message:text", (ctx, next) => {
+    if (normalizePersianText(ctx.message.text) === "جدول امتیازات") {
+      return leaderboard.handleLeaderboardCommand(ctx, db);
+    }
+    return next();
+  });
 
   // ---------- دستورات کارمندی ----------
   bot.command("resetboard", (ctx) => leaderboard.handleResetboardCommand(ctx, db));
