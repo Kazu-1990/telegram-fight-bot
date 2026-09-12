@@ -6,11 +6,11 @@
 // ---------- دسترسی و امنیت ----------
 
 // کد فعال‌سازی گروه‌ها - خودت اینو عوض کن
-export const GROUP_ACTIVATION_CODE = "CHANGE_ME_1234";
+export const GROUP_ACTIVATION_CODE = "8486";
 
 // آیدی عددی کارمندها (فقط اونا به دستورات مدیریتی دسترسی دارن)
 // duel, cancel duel, star, antistar, resetboard, block, unblock
-export const STAFF_IDS: number[] = [
+export const STAFF_IDS: number[] = [ 8104311231
   // مثال: 123456789,
 ];
 
@@ -19,7 +19,7 @@ export function isStaff(userId: number): boolean {
 }
 
 // نام کاربری بات (بدون @) - برای ساخت دیپ‌لینک فعال‌سازی گروه لازمه
-export const BOT_USERNAME = "CHANGE_ME_bot";
+export const BOT_USERNAME = "Fight_castlevania_bot";
 
 // ---------- ضد اسپم ----------
 // فرض منطقی: اگه یه کاربر توی بازه‌ی زمانی کوتاه، تعداد دستور مشخصی بفرسته، اسپمر شناخته میشه
