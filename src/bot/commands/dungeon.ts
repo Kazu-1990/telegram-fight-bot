@@ -11,8 +11,13 @@ function isGroupChat(ctx: Context): boolean {
   return ctx.chat?.type === "group" || ctx.chat?.type === "supergroup";
 }
 
-function dungeonKeyboard(): InlineKeyboard {
-  return new InlineKeyboard().webApp("🏰 ورود به دانجن", `${WEBAPP_BASE_URL}${WEBAPP_PATHS.dungeon}`);
+// دکمه‌ی web_app توی گروه مجاز نیست (خطای BUTTON_TYPE_INVALID) - پس توی گروه فقط دکمه‌ی معمولی
+function groupEntryKeyboard(): InlineKeyboard {
+  return new InlineKeyboard().text("🏰 ورود به دانجن", "dungeon_enter");
+}
+
+function pvWebAppKeyboard(): InlineKeyboard {
+  return new InlineKeyboard().webApp("🏰 شروع مبارزه", `${WEBAPP_BASE_URL}${WEBAPP_PATHS.dungeon}`);
 }
 
 function formatRemaining(ms: number): string {
@@ -53,6 +58,48 @@ export async function handleDungeonCommand(ctx: Context, db: D1): Promise<void> 
 
   await ctx.reply(
     "🏰 دانجن منتظر شماست! هرکس که وارد شود، مبارزه‌ی شخصی خودش را انجام می‌دهد.",
-    { reply_markup: dungeonKeyboard() }
+    { reply_markup: groupEntryKeyboard() }
   );
+}
+
+// ---------- کلیک روی دکمه‌ی گروه - چک نهایی + فرستادن دکمه‌ی واقعی مینی‌اپ در پیوی ----------
+export async function handleDungeonEnterCallback(ctx: Context, db: D1): Promise<void> {
+  const userId = ctx.from!.id;
+
+  if (await isPlayerBlocked(db, userId)) {
+    await ctx.answerCallbackQuery({ text: "شما بلاک شده‌اید." });
+    return;
+  }
+  if (!(await isPlayerRegistered(db, userId))) {
+    await ctx.answerCallbackQuery({ text: "اول باید در پیوی ربات ثبت‌نام کنید." });
+    return;
+  }
+
+  const player = await getPlayer(db, userId);
+  if (player && player.level < DUNGEON_MIN_LEVEL) {
+    await ctx.answerCallbackQuery({
+      text: `این بخش از لول ${DUNGEON_MIN_LEVEL} به بالا باز می‌شود. لول فعلی شما: ${player.level}`,
+      show_alert: true,
+    });
+    return;
+  }
+  if (player?.dungeonCooldownUntil && player.dungeonCooldownUntil > Date.now()) {
+    await ctx.answerCallbackQuery({
+      text: `شما اخیراً باخته‌اید. ${formatRemaining(player.dungeonCooldownUntil - Date.now())} دیگر صبر کنید.`,
+      show_alert: true,
+    });
+    return;
+  }
+
+  try {
+    await ctx.api.sendMessage(userId, "🏰 برای شروع مبارزه با دانجن روی دکمه بزن:", {
+      reply_markup: pvWebAppKeyboard(),
+    });
+    await ctx.answerCallbackQuery({ text: "به پیوی‌تون پیام دادم، اونجا رو چک کنید." });
+  } catch {
+    await ctx.answerCallbackQuery({
+      text: "اول باید یک‌بار در پیوی ربات /start بزنید تا بتونم بهتون پیام بدم.",
+      show_alert: true,
+    });
+  }
 }
