@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>شاپ</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  body { font-family: sans-serif; background: #111; color: #eee; padding: 12px; margin: 0; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+  .tabs button { flex: 1; padding: 10px; border: none; border-radius: 8px; background: #333; color: #ccc; font-size: 13px; }
+  .tabs button.active { background: #2a6; color: #fff; }
+  .page { display: none; }
+  .page.active { display: block; }
+  .item-row { display: flex; justify-content: space-between; align-items: center; border: 1px solid #333; border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; font-size: 13px; }
+  button.small { padding: 6px 10px; border-radius: 6px; border: none; background: #2a6; color: #fff; font-size: 12px; }
+  select, input { background: #222; color: #eee; border: 1px solid #444; border-radius: 6px; padding: 6px; margin: 4px 0; width: 100%; box-sizing: border-box; }
+  #msg { text-align: center; margin: 10px 0; font-size: 13px; color: #9c9; min-height: 18px; }
+  .empty { color: #777; text-align: center; padding: 20px 0; }
+</style>
+</head>
+<body>
+
+<div class="tabs">
+  <button data-tab="armor" class="active">آرمور</button>
+  <button data-tab="weapon">سلاح</button>
+  <button data-tab="potion">پوشن</button>
+  <button data-tab="craft">کرفت</button>
+</div>
+
+<div id="msg"></div>
+
+<div class="page active" id="page-armor">
+  <p style="font-size:13px;color:#999;">سکه: <span id="armor-coins">-</span> FC</p>
+  <div id="armor-list"></div>
+</div>
+<div class="page" id="page-weapon">
+  <p style="font-size:13px;color:#999;">سکه: <span id="weapon-coins">-</span> FC</p>
+  <div id="weapon-list"></div>
+</div>
+
+<div class="page" id="page-potion">
+  <h4>موجودی سکه: <span id="potion-coins">-</span> FC</h4>
+  <h4>پوشن‌های شما</h4>
+  <div id="my-potions"></div>
+  <select id="sell-item"></select>
+  <select id="sell-price"></select>
+  <button class="small" id="btn-sell">🏷 گذاشتن برای فروش</button>
+
+  <h4 style="margin-top:16px;">بازار خاندان شما</h4>
+  <div id="market-list"></div>
+</div>
+
+<div class="page" id="page-craft">
+  <p style="font-size:13px;color:#999;">هزینه‌ی هر تلاش: <span id="craft-cost"></span> FC — حداقل لول: <span id="craft-min-level"></span></p>
+  <select id="craft-slot-1"></select>
+  <select id="craft-slot-2"></select>
+  <select id="craft-slot-3"></select>
+  <button class="small" id="btn-craft">🧪 ترکیب کن</button>
+</div>
+
+<script>
+const tg = window.Telegram.WebApp;
+tg.ready();
+tg.expand();
+
+const API = "/api/shop";
+function el(id) { return document.getElementById(id); }
+
+async function callApi(path, extra = {}) {
+  const res = await fetch(`${API}/${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ initData: tg.initData, ...extra }),
+  });
+  const data = await res.json();
+  if (data.error) {
+    el("msg").textContent = "❌ " + data.error;
+    el("msg").style.color = "#f66";
+  }
+  return data;
+}
+
+function showMsg(text) {
+  el("msg").textContent = text;
+  el("msg").style.color = "#9c9";
+}
+
+// ---------- تب‌ها ----------
+for (const btn of document.querySelectorAll(".tabs button")) {
+  btn.onclick = () => {
+    document.querySelectorAll(".tabs button").forEach((b) => b.classList.remove("active"));
+    document.querySelectorAll(".page").forEach((p) => p.classList.remove("active"));
+    btn.classList.add("active");
+    el("page-" + btn.dataset.tab).classList.add("active");
+    if (btn.dataset.tab === "armor") loadArmorTab();
+    if (btn.dataset.tab === "weapon") loadWeaponTab();
+    if (btn.dataset.tab === "potion") loadPotionTab();
+    if (btn.dataset.tab === "craft") loadCraftTab();
+  };
+}
+
+function renderGearList(container, coinsEl, data, buyFn) {
+  coinsEl.textContent = data.coinsFc;
+  container.innerHTML = data.items
+    .map((i) => {
+      let action;
+      if (i.equipped) action = `<span style="color:#2a6;">اکیپ شده</span>`;
+      else if (!i.unlocked) action = `<span style="color:#777;">لول ${i.unlockLevel} لازم است</span>`;
+      else action = `<button class="small" onclick="${buyFn}('${i.key}')">خرید (${i.priceFc} FC)</button>`;
+      return `<div class="item-row"><span>${i.name}</span>${action}</div>`;
+    })
+    .join("");
+}
+
+async function loadArmorTab() {
+  const data = await callApi("armor/list");
+  if (data.error) return;
+  renderGearList(el("armor-list"), el("armor-coins"), data, "buyArmor");
+}
+async function loadWeaponTab() {
+  const data = await callApi("weapon/list");
+  if (data.error) return;
+  renderGearList(el("weapon-list"), el("weapon-coins"), data, "buyWeapon");
+}
+window.buyArmor = async (itemKey) => {
+  const data = await callApi("armor/buy", { itemKey });
+  if (data.ok) { showMsg("✅ زره خریداری شد."); loadArmorTab(); }
+};
+window.buyWeapon = async (itemKey) => {
+  const data = await callApi("weapon/buy", { itemKey });
+  if (data.ok) { showMsg("✅ سلاح خریداری شد."); loadWeaponTab(); }
+};
+
+loadArmorTab();
+
+// ---------- تب پوشن ----------
+async function loadPotionTab() {
+  const data = await callApi("potion/market");
+  if (data.error) return;
+
+  el("potion-coins").textContent = data.coinsFc;
+
+  el("my-potions").innerHTML = data.myPotions.length
+    ? data.myPotions.map((p) => `<div class="item-row"><span>${p.itemKey} ×${p.quantity}</span></div>`).join("")
+    : `<div class="empty">پوشنی ندارید</div>`;
+
+  el("sell-item").innerHTML = data.myPotions.map((p) => `<option value="${p.itemKey}">${p.itemKey}</option>`).join("");
+  el("sell-price").innerHTML = data.allowedPrices.map((p) => `<option value="${p}">${p} FC</option>`).join("");
+
+  el("market-list").innerHTML = data.listings.length
+    ? data.listings
+        .map(
+          (l) => `<div class="item-row">
+            <span>${l.itemKey} — ${l.priceFc} FC</span>
+            <button class="small" onclick="buyListing(${l.id})">خرید</button>
+          </div>`
+        )
+        .join("")
+    : `<div class="empty">آگهی‌ای برای خاندان شما نیست</div>`;
+}
+
+el("btn-sell").onclick = async () => {
+  const itemKey = el("sell-item").value;
+  const priceFc = Number(el("sell-price").value);
+  if (!itemKey) return;
+  const data = await callApi("potion/sell", { itemKey, priceFc });
+  if (data.ok) { showMsg("✅ برای فروش گذاشته شد."); loadPotionTab(); }
+};
+
+window.buyListing = async (listingId) => {
+  const data = await callApi("potion/buy", { listingId });
+  if (data.ok) { showMsg("✅ خریداری شد."); loadPotionTab(); }
+};
+
+// ---------- تب کرفت ----------
+async function loadCraftTab() {
+  const data = await callApi("craft/inventory");
+  if (data.error) return;
+
+  el("craft-cost").textContent = data.costPerAttempt;
+  el("craft-min-level").textContent = data.minLevel;
+
+  const options = data.resources.length
+    ? data.resources.map((r) => `<option value="${r.itemKey}">${r.itemKey} (${r.quantity})</option>`).join("")
+    : `<option value="">منبعی ندارید</option>`;
+
+  el("craft-slot-1").innerHTML = options;
+  el("craft-slot-2").innerHTML = options;
+  el("craft-slot-3").innerHTML = options;
+}
+
+el("btn-craft").onclick = async () => {
+  const resources = [el("craft-slot-1").value, el("craft-slot-2").value, el("craft-slot-3").value];
+  if (resources.some((r) => !r)) return;
+
+  const data = await callApi("craft/attempt", { resources });
+  if (data.error) return;
+
+  if (data.success) showMsg(`✅ پوشن ساخته شد: ${data.potionKey}`);
+  else if (data.reason === "no_match") showMsg("❌ این ترکیب هیچ پوشنی نمی‌سازد.");
+  else if (data.reason === "inventory_full") showMsg("❌ اینونتوری پوشن شما جا ندارد.");
+
+  loadCraftTab();
+};
+</script>
+</body>
+</html>
