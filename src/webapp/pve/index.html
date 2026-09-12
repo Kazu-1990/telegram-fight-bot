@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>مبارزه با دشمن</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  body { font-family: sans-serif; background: #111; color: #eee; padding: 12px; margin: 0; }
+  .fighter { border: 1px solid #444; border-radius: 8px; padding: 10px; margin-bottom: 10px; }
+  .bar-row { display: flex; justify-content: space-between; font-size: 14px; margin: 4px 0; }
+  .gear-row { display: flex; gap: 8px; margin-top: 6px; }
+  .gear-box { border: 1px dashed #555; border-radius: 6px; padding: 6px 10px; font-size: 12px; flex: 1; text-align: center; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  button { flex: 1; min-width: 70px; padding: 10px; border-radius: 8px; border: none; background: #2a6; color: #fff; font-size: 14px; }
+  button:disabled { background: #444; color: #888; }
+  .sub-actions { display: flex; gap: 8px; margin-top: 8px; }
+  #log { font-size: 12px; color: #aaa; margin-top: 14px; max-height: 140px; overflow-y: auto; border-top: 1px solid #333; padding-top: 8px; }
+  #status { text-align: center; margin: 8px 0; font-weight: bold; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<div id="status">در حال بارگذاری...</div>
+
+<div class="fighter" id="you-box"></div>
+<div class="fighter" id="enemy-box"></div>
+
+<div class="actions" id="main-actions">
+  <button id="btn-attack">حمله</button>
+  <button id="btn-defense">دفاع</button>
+  <button id="btn-ultimate">آلتیمیت</button>
+</div>
+
+<div class="sub-actions hidden" id="target-actions">
+  <button data-target="head">سر</button>
+  <button data-target="body">بدن</button>
+  <button data-target="leg">پا</button>
+  <button id="btn-cancel-target">بازگشت</button>
+</div>
+
+<div class="sub-actions hidden" id="death-duel-actions">
+  <button data-choice="punch">مشت</button>
+  <button data-choice="defense">دفاع</button>
+  <button data-choice="magic">جادو</button>
+</div>
+
+<button class="hidden" id="btn-retry" style="margin-top:12px;">🔁 مبارزه‌ی جدید</button>
+
+<div id="log"></div>
+
+<script>
+const tg = window.Telegram.WebApp;
+tg.ready();
+tg.expand();
+
+// تشخیص forest یا dungeon از روی مسیر - چون هر دو از همین فایل استفاده میکنن
+const kind = window.location.pathname.includes("dungeon") ? "dungeon" : "forest";
+const API_BASE = `/api/${kind}`;
+
+let matchId = null;
+let pendingMainAction = null;
+
+function el(id) { return document.getElementById(id); }
+
+async function callApi(path, extra) {
+  const res = await fetch(`${API_BASE}/${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ initData: tg.initData, matchId, ...extra }),
+  });
+  const data = await res.json();
+  if (data.error) {
+    el("status").textContent = "خطا: " + data.error;
+    return null;
+  }
+  return data;
+}
+
+function renderFighter(box, fighter, label) {
+  box.innerHTML = `
+    <div><b>${label}</b></div>
+    <div class="bar-row"><span>HP</span><span>${fighter.hp} / ${fighter.hpMax}</span></div>
+    ${fighter.mana !== undefined ? `<div class="bar-row"><span>Mana</span><span>${fighter.mana} / 8</span></div>` : ""}
+    <div class="gear-row">
+      <div class="gear-box">آرمور: ${fighter.armorKey ?? "-"}</div>
+      <div class="gear-box">سلاح: ${fighter.weaponKey ?? "-"}</div>
+    </div>
+  `;
+}
+
+function renderEnemy(box, cpu) {
+  box.innerHTML = `
+    <div><b>${cpu.definition?.key ?? "دشمن"}</b></div>
+    <div class="bar-row"><span>HP</span><span>${cpu.hp} / ${cpu.hpMax}</span></div>
+    ${cpu.isVulnerable === false ? `<div class="bar-row"><span>⚠️ غیرقابل ضربه</span></div>` : ""}
+  `;
+}
+
+function renderLog(log) {
+  el("log").innerHTML = (log ?? []).slice(-15).map((l) => `<div>${l}</div>`).join("");
+}
+
+function renderState(state) {
+  renderFighter(el("you-box"), state.player, "شما");
+  renderEnemy(el("enemy-box"), state.cpu);
+  renderLog(state.log);
+  el("status").textContent = "نوبت شماست";
+  setActionButtonsDisabled(false);
+  el("btn-retry").classList.add("hidden");
+  el("main-actions").classList.remove("hidden");
+}
+
+function setActionButtonsDisabled(disabled) {
+  for (const b of document.querySelectorAll("#main-actions button")) b.disabled = disabled;
+}
+
+async function startMatch() {
+  const data = await callApi("start", {});
+  if (!data) return;
+  matchId = data.matchId;
+  renderState(data.state);
+}
+
+async function handleActionResult(data) {
+  if (!data) return;
+  renderState(data.state);
+
+  if (data.outcome === "death_duel_start") {
+    el("status").textContent = "⚔️ دوئل مرگ! یکی رو انتخاب کن:";
+    el("main-actions").classList.add("hidden");
+    el("target-actions").classList.add("hidden");
+    el("death-duel-actions").classList.remove("hidden");
+    return;
+  }
+
+  if (data.outcome === "player_won") {
+    let msg = "🏆 شما بردید!";
+    if (data.reward) {
+      msg += ` (+${data.reward.fcGained} FC، +${data.reward.xpGained} XP`;
+      if (data.reward.bonusItem) msg += `، آیتم جایزه: ${data.reward.bonusItem}`;
+      msg += ")";
+      if (data.reward.levelUp?.leveledUp) msg += ` — لول شما به ${data.reward.levelUp.newLevel} رسید!`;
+    }
+    el("status").textContent = msg;
+    endMatchUi();
+  } else if (data.outcome === "player_lost") {
+    el("status").textContent = "💀 شما باختید.";
+    endMatchUi();
+  }
+}
+
+async function handleDeathDuelResult(data) {
+  if (!data) return;
+  renderState(data.state);
+
+  if (data.winner === null) {
+    el("status").textContent = "مساوی شد! دوباره انتخاب کن.";
+    return;
+  }
+
+  el("death-duel-actions").classList.add("hidden");
+  if (data.winner === "player") {
+    let msg = "🏆 شما دوئل مرگ رو بردید!";
+    if (data.reward) {
+      msg += ` (+${data.reward.fcGained} FC، +${data.reward.xpGained} XP)`;
+    }
+    el("status").textContent = msg;
+  } else {
+    el("status").textContent = "💀 شما دوئل مرگ رو باختید.";
+  }
+  endMatchUi();
+}
+
+for (const btn of document.querySelectorAll("#death-duel-actions button[data-choice]")) {
+  btn.onclick = async () => {
+    const choice = btn.getAttribute("data-choice");
+    const data = await callApi("death-duel-choice", { choice });
+    await handleDeathDuelResult(data);
+  };
+}
+
+function endMatchUi() {
+  el("main-actions").classList.add("hidden");
+  el("target-actions").classList.add("hidden");
+  el("death-duel-actions").classList.add("hidden");
+  el("btn-retry").classList.remove("hidden");
+}
+
+el("btn-attack").onclick = () => { pendingMainAction = "attack"; showTargetMenu(); };
+el("btn-defense").onclick = () => { pendingMainAction = "defense"; showTargetMenu(); };
+el("btn-ultimate").onclick = async () => {
+  const data = await callApi("action", { action: "ultimate" });
+  await handleActionResult(data);
+};
+el("btn-retry").onclick = startMatch;
+
+function showTargetMenu() {
+  el("main-actions").classList.add("hidden");
+  el("target-actions").classList.remove("hidden");
+}
+el("btn-cancel-target").onclick = () => {
+  el("target-actions").classList.add("hidden");
+  el("main-actions").classList.remove("hidden");
+};
+
+for (const btn of document.querySelectorAll("#target-actions button[data-target]")) {
+  btn.onclick = async () => {
+    const target = btn.getAttribute("data-target");
+    el("target-actions").classList.add("hidden");
+    el("main-actions").classList.remove("hidden");
+    const data = await callApi("action", { action: pendingMainAction, target });
+    await handleActionResult(data);
+  };
+}
+
+startMatch();
+</script>
+</body>
+</html>
