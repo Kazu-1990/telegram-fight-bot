@@ -32,16 +32,14 @@ function inviteKeyboard(matchId: number): InlineKeyboard {
     .text("🚫 کنسل (کارمند)", `duel_cancel:${matchId}`);
 }
 
-function activeMatchKeyboard(matchId: number, fighter1Id: number, fighter2Id: number): InlineKeyboard {
-  const url1 = `${WEBAPP_BASE_URL}${WEBAPP_PATHS.duel}?matchId=${matchId}`;
-  return new InlineKeyboard()
-    .webApp("🎮 ادامه در مینی‌اپ", url1)
-    .row()
-    .text("🚫 کنسل (کارمند)", `duel_cancel:${matchId}`);
+function activeMatchGroupKeyboard(matchId: number): InlineKeyboard {
+  // اینجا دیگه دکمه‌ی مینی‌اپ نداریم - web_app توی گروه مجاز نیست (BUTTON_TYPE_INVALID)
+  return new InlineKeyboard().text("🚫 کنسل (کارمند)", `duel_cancel:${matchId}`);
 }
 
-function finishedMatchKeyboard(matchId: number): InlineKeyboard {
-  return new InlineKeyboard().text("📜 نمایش نتیجه", `duel_result:${matchId}`);
+function pvDuelKeyboard(matchId: number): InlineKeyboard {
+  const url = `${WEBAPP_BASE_URL}${WEBAPP_PATHS.duel}?matchId=${matchId}`;
+  return new InlineKeyboard().webApp("🎮 ادامه در مینی‌اپ", url);
 }
 
 // ---------- /duel (فقط کارمند مجاز به شروع کردن این دستوره) ----------
@@ -139,9 +137,21 @@ export async function handleDuelJoinCallback(ctx: Context, db: D1): Promise<void
 
   await ctx.answerCallbackQuery({ text: "حریف دوم پیدا شد! مبارزه شروع می‌شود." });
   await ctx.editMessageText(
-    `⚔️ مبارزه بین ${p1.name} و ${p2.name} شروع شد!\nهر دو نفر برای ادامه، وارد مینی‌اپ شوند:`,
-    { reply_markup: activeMatchKeyboard(matchId, p1.telegramId, p2.telegramId) }
+    `⚔️ مبارزه بین ${p1.name} و ${p2.name} شروع شد!\nبرای هرکدوم پیوی فرستادم تا وارد مینی‌اپ شوند.`,
+    { reply_markup: activeMatchGroupKeyboard(matchId) }
   );
+
+  // چون دکمه‌ی web_app توی گروه کار نمی‌کنه، به هر دو نفر جدا پیوی می‌فرستیم
+  for (const p of [p1, p2]) {
+    try {
+      await ctx.api.sendMessage(p.telegramId, "⚔️ مبارزه‌ی شما شروع شد! برای ادامه روی دکمه بزن:", {
+        reply_markup: pvDuelKeyboard(matchId),
+      });
+    } catch {
+      // اگه کسی هیچوقت پیوی ربات رو استارت نکرده باشه، پیام نمیره - این یعنی باید اول ثبت‌نام میشد
+      // (که طبق منطق بازی نباید پیش بیاد، چون ورود به duel نیاز به ثبت‌نام قبلی داره)
+    }
+  }
 }
 
 // ---------- دکمه‌ی کنسل (فقط کارمند) ----------
@@ -164,8 +174,10 @@ export async function handleDuelCancelCallback(ctx: Context, db: D1): Promise<vo
   await ctx.editMessageText("🚫 این مبارزه توسط یک کارمند کنسل شد. هیچ تغییری ثبت نشد.");
 }
 
-// این تابع توسط API مینی‌اپ (فاز بعد) صدا زده میشه، وقتی combat engine اعلام کرد بازی برنده دارد.
-// کار این تابع: ثبت برد در دیتابیس + بستن پیام گروه و گذاشتن دکمه‌ی «نمایش نتیجه»
+const HOUSE_LABELS: Record<string, string> = { stalker: "Stalker", evans: "Evans", scott: "Scott" };
+
+// این تابع توسط API مینی‌اپ صدا زده میشه، وقتی combat engine اعلام کرد بازی برنده دارد.
+// کار این تابع: ثبت برد در دیتابیس + آپدیت مستقیم پیام گروه با جزئیات نتیجه (بدون نیاز به کلیک)
 export async function closeDuelMatch(
   bot: { api: { editMessageText: (chatId: number, messageId: number, text: string, opts?: any) => Promise<unknown> } },
   db: D1,
@@ -177,32 +189,32 @@ export async function closeDuelMatch(
 
   await finishDuelMatch(db, matchId, winnerId);
 
-  if (match.chatId && match.groupMessageId) {
-    await bot.api.editMessageText(
-      match.chatId,
-      match.groupMessageId,
-      "⚔️ این مبارزه به پایان رسید. برای دیدن نتیجه کلیک کنید:",
-      { reply_markup: finishedMatchKeyboard(matchId) }
-    );
-  }
-}
+  if (!match.chatId || !match.groupMessageId) return;
 
-// ---------- نمایش نتیجه بعد از پایان (کلیک روی پیام بسته‌شده) ----------
-export async function handleDuelResultCallback(ctx: Context, db: D1): Promise<void> {
-  const matchId = Number(ctx.callbackQuery!.data!.split(":")[1]);
-  const match = await getMatch(db, matchId);
-
-  if (!match || match.status !== "finished" || !match.winnerId) {
-    await ctx.answerCallbackQuery({ text: "نتیجه هنوز مشخص نیست." });
-    return;
-  }
-
-  const winner = await getPlayer(db, match.winnerId);
-  const loserId = match.player1Id === match.winnerId ? match.player2Id : match.player1Id;
+  const loserId = match.player1Id === winnerId ? match.player2Id : match.player1Id;
+  const winner = await getPlayer(db, winnerId);
   const loser = loserId ? await getPlayer(db, loserId) : null;
 
-  await ctx.answerCallbackQuery({
-    text: `🏆 برنده: ${winner?.name ?? match.winnerId}\n💀 بازنده: ${loser?.name ?? loserId ?? "?"}`,
-    show_alert: true,
-  });
+  // جزئیات نبرد (HP نهایی، تعداد راند، خلاصه‌ی رویدادها) از state ذخیره‌شده میاد
+  const state = match.state as any;
+  const winnerFighter = state?.fighters?.find((f: any) => f.id === winnerId);
+  const loserFighter = state?.fighters?.find((f: any) => f.id === loserId);
+
+  const lines = [
+    "⚔️ مبارزه به پایان رسید!",
+    "",
+    `🏆 برنده: ${winner?.name ?? winnerId} (${HOUSE_LABELS[winner?.house ?? ""] ?? winner?.house ?? "-"}, ${winner?.race ?? "-"})`,
+    `💀 بازنده: ${loser?.name ?? loserId ?? "?"} (${HOUSE_LABELS[loser?.house ?? ""] ?? loser?.house ?? "-"}, ${loser?.race ?? "-"})`,
+  ];
+
+  if (state?.round) lines.push("", `📊 تعداد راند: ${state.round}`);
+  if (winnerFighter) lines.push(`❤️ HP نهایی برنده: ${Math.max(0, winnerFighter.hp)}/${winnerFighter.hpMax}`);
+  if (loserFighter) lines.push(`💔 HP نهایی بازنده: ${Math.max(0, loserFighter.hp)}/${loserFighter.hpMax}`);
+
+  if (Array.isArray(state?.log) && state.log.length > 0) {
+    const summary = state.log.slice(-5).join("\n");
+    lines.push("", "📝 خلاصه‌ی نبرد:", summary);
+  }
+
+  await bot.api.editMessageText(match.chatId, match.groupMessageId, lines.join("\n"));
 }
