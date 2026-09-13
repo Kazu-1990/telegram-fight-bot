@@ -43,6 +43,7 @@ export async function handleProfileCommand(ctx: Context, db: D1): Promise<void> 
     `🏠 خاندان: ${player.house}`,
     `🧬 نژاد: ${player.race}`,
     `⭐️ لول: ${player.level} (XP: ${player.xp})`,
+    `💰 سکه (FC): ${player.coinsFc}`,
     `🛡 آرمور: ${gear.armorKey ?? "ندارد"}`,
     `🗡 سلاح: ${gear.weaponKey ?? "ندارد"}`,
     `🧪 پوشن‌های فعلی: ${formatList(potions)}`,
