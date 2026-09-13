@@ -1,15 +1,8 @@
 import { getPlayer, isPlayerBlocked, isPlayerRegistered } from "../../db/queries/players";
-import { getInventoryByType, getEquippedGear } from "../../db/queries/inventory";
+import { getInventoryByType } from "../../db/queries/inventory";
 import { createListing, listActiveByHouse, cancelListing, buyListing } from "../../db/queries/marketplace";
 import { attemptCraft } from "../../db/queries/craft";
-import { buyArmor, buyWeapon } from "../../db/queries/gearShop";
-import {
-  MIN_LEVEL_FOR_CRAFT,
-  CRAFT_ATTEMPT_COST_FC,
-  MARKETPLACE_ALLOWED_PRICES_FC,
-  ARMOR_ITEMS,
-  WEAPON_ITEMS,
-} from "../../config/constants";
+import { MIN_LEVEL_FOR_CRAFT, CRAFT_ATTEMPT_COST_FC, MARKETPLACE_ALLOWED_PRICES_FC } from "../../config/constants";
 
 type D1 = any;
 
@@ -29,31 +22,27 @@ async function requireActivePlayer(db: D1, userId: number) {
 }
 
 // ---------- آرمور ----------
+// فعلاً غیرفعاله - «در دست ساخت است» نشون داده میشه
 export async function getArmorList(db: D1, userId: number) {
   const player = await requireActivePlayer(db, userId);
   if (isApiError(player)) return player;
-
-  const gear = await getEquippedGear(db, userId);
-  const items = ARMOR_ITEMS.map((a) => ({ ...a, unlocked: player.level >= a.unlockLevel, equipped: gear.armorKey === a.key }));
-  return { items, coinsFc: player.coinsFc };
+  return { disabled: true, message: "در دست ساخت است", coinsFc: player.coinsFc };
 }
 
-export async function purchaseArmor(db: D1, userId: number, armorKey: string) {
-  return buyArmor(db, userId, armorKey);
+export async function purchaseArmor(_db: D1, _userId: number, _armorKey: string) {
+  return { ok: false, error: "این بخش در دست ساخت است." };
 }
 
 // ---------- سلاح ----------
+// فعلاً غیرفعاله - «در دست ساخت است» نشون داده میشه
 export async function getWeaponList(db: D1, userId: number) {
   const player = await requireActivePlayer(db, userId);
   if (isApiError(player)) return player;
-
-  const gear = await getEquippedGear(db, userId);
-  const items = WEAPON_ITEMS.map((w) => ({ ...w, unlocked: player.level >= w.unlockLevel, equipped: gear.weaponKey === w.key }));
-  return { items, coinsFc: player.coinsFc };
+  return { disabled: true, message: "در دست ساخت است", coinsFc: player.coinsFc };
 }
 
-export async function purchaseWeapon(db: D1, userId: number, weaponKey: string) {
-  return buyWeapon(db, userId, weaponKey);
+export async function purchaseWeapon(_db: D1, _userId: number, _weaponKey: string) {
+  return { ok: false, error: "این بخش در دست ساخت است." };
 }
 
 // ---------- بازار پوشن ----------
