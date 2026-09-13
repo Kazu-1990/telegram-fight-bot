@@ -28,6 +28,10 @@ export async function handleBlockCommand(ctx: Context, db: D1): Promise<void> {
     await ctx.reply("برای بلاک کردن، باید روی پیام شخص مورد نظر ریپلای کنید.");
     return;
   }
+  if (isStaff(targetId)) {
+    await ctx.reply("⛔️ کارمندها قابل بلاک شدن نیستند.");
+    return;
+  }
 
   await blockPlayer(db, targetId, "manual");
   await ctx.reply("⛔️ این شخص بلاک شد و تا آنبلاک شدن نمی‌تواند از ربات استفاده کند.");
