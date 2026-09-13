@@ -100,37 +100,21 @@ for (const btn of document.querySelectorAll(".tabs button")) {
   };
 }
 
-function renderGearList(container, coinsEl, data, buyFn) {
+function renderGearList(container, coinsEl, data) {
   coinsEl.textContent = data.coinsFc;
-  container.innerHTML = data.items
-    .map((i) => {
-      let action;
-      if (i.equipped) action = `<span style="color:#2a6;">اکیپ شده</span>`;
-      else if (!i.unlocked) action = `<span style="color:#777;">لول ${i.unlockLevel} لازم است</span>`;
-      else action = `<button class="small" onclick="${buyFn}('${i.key}')">خرید (${i.priceFc} FC)</button>`;
-      return `<div class="item-row"><span>${i.name}</span>${action}</div>`;
-    })
-    .join("");
+  container.innerHTML = `<div class="empty">🚧 ${data.message ?? "در دست ساخت است"}</div>`;
 }
 
 async function loadArmorTab() {
   const data = await callApi("armor/list");
   if (data.error) return;
-  renderGearList(el("armor-list"), el("armor-coins"), data, "buyArmor");
+  renderGearList(el("armor-list"), el("armor-coins"), data);
 }
 async function loadWeaponTab() {
   const data = await callApi("weapon/list");
   if (data.error) return;
-  renderGearList(el("weapon-list"), el("weapon-coins"), data, "buyWeapon");
+  renderGearList(el("weapon-list"), el("weapon-coins"), data);
 }
-window.buyArmor = async (itemKey) => {
-  const data = await callApi("armor/buy", { itemKey });
-  if (data.ok) { showMsg("✅ زره خریداری شد."); loadArmorTab(); }
-};
-window.buyWeapon = async (itemKey) => {
-  const data = await callApi("weapon/buy", { itemKey });
-  if (data.ok) { showMsg("✅ سلاح خریداری شد."); loadWeaponTab(); }
-};
 
 loadArmorTab();
 
