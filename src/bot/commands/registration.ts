@@ -90,7 +90,7 @@ export async function handleRegisterStart(ctx: Context, db: D1): Promise<void> {
   await ctx.answerCallbackQuery();
 
   await startRegistrationSession(db, userId);
-  await ctx.reply("اسم خود را بدون نام خاندان بفرستید:");
+  await ctx.reply("اسم خود را با حروف انگلیسی و بدون نام خاندان بفرستید:");
 }
 
 // ---------- شروع ویزارد (ویرایش) ----------
@@ -109,7 +109,7 @@ export async function handleRegisterEdit(ctx: Context, db: D1): Promise<void> {
   await startRegistrationSession(db, userId);
   await ctx.reply(
     "در حال ویرایش پروفایل شما. سوابق بازی‌تون (لول، سکه، برد‌ها و...) دست نمی‌خورد.\n\n" +
-      "اسم جدید خود را بدون نام خاندان بفرستید:"
+      "اسم جدید خود را با حروف انگلیسی و بدون نام خاندان بفرستید:"
   );
 }
 
@@ -143,8 +143,10 @@ export async function handleRegistrationTextStep(ctx: Context, db: D1, next: () 
   if (!session || session.step !== "awaiting_name") return next();
 
   const name = ctx.message.text.trim();
-  if (!name || name.length > 32) {
-    await ctx.reply("اسم نامعتبر است. لطفاً یک اسم کوتاه‌تر (بدون خاندان) بفرستید:");
+  // فقط حروف انگلیسی (و فاصله/آپاستروف/خط تیره برای اسم‌های مرکب) مجازه - اسم فارسی/عربی قبول نمیشه
+  const ENGLISH_NAME_REGEX = /^[A-Za-z][A-Za-z '-]{0,31}$/;
+  if (!ENGLISH_NAME_REGEX.test(name)) {
+    await ctx.reply("اسم نامعتبر است. لطفاً فقط با حروف انگلیسی، بدون خاندان، بفرستید (حداکثر ۳۲ کاراکتر):");
     return;
   }
 
