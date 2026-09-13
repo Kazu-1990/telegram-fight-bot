@@ -1,6 +1,8 @@
 import type { Context, NextFunction } from "grammy";
 import { isPlayerBlocked } from "../../db/queries/players";
 import { checkAndRecordSpam } from "./antispam";
+import { normalizePersianText } from "../shared/text";
+import { isStaff } from "../../config/constants";
 
 type D1 = any;
 
@@ -8,7 +10,7 @@ type D1 = any;
 // (اگه بعداً دستور متنی دیگه‌ای اضافه شد، همینجا اضافه‌ش کن)
 function isCommandLike(text: string | undefined): boolean {
   if (!text) return false;
-  return text.startsWith("/") || text.trim() === "جدول امتیازات";
+  return text.startsWith("/") || normalizePersianText(text) === "جدول امتیازات";
 }
 
 export function authAndAntiSpamMiddleware(db: D1) {
@@ -23,6 +25,11 @@ export function authAndAntiSpamMiddleware(db: D1) {
     }
 
     const userId = ctx.from.id;
+
+    // کارمندها هیچوقت بلاک نمیشن - نه با اسپم، نه با /block دستی
+    if (isStaff(userId)) {
+      return next();
+    }
 
     if (await isPlayerBlocked(db, userId)) {
       await ctx.reply("⛔️ شما بلاک شده‌اید و نمی‌توانید از ربات استفاده کنید.");
