@@ -1,10 +1,11 @@
-import { ANTISPAM_WINDOW_MS, ANTISPAM_MAX_COMMANDS, ANTISPAM_BLOCK_REASON } from "../../config/constants";
+import { ANTISPAM_WINDOW_MS, ANTISPAM_MAX_COMMANDS, ANTISPAM_BLOCK_REASON, isStaff } from "../../config/constants";
 import { blockPlayer } from "../../db/queries/players";
 
 type D1 = any;
 
 // هر دستور رو لاگ میکنه و اگه از سقف مجاز توی بازه‌ی زمانی رد شده باشه، خودکار بلاک میکنه
 // خروجی true یعنی همین الان بلاک شد (پیام اسپم باید نشون داده بشه)
+// کارمندها هیچوقت با اسپم خودکار بلاک نمیشن
 export async function checkAndRecordSpam(db: D1, playerId: number, command: string): Promise<boolean> {
   const now = Date.now();
 
@@ -12,6 +13,8 @@ export async function checkAndRecordSpam(db: D1, playerId: number, command: stri
     .prepare("INSERT INTO command_log (player_id, command, created_at) VALUES (?, ?, ?)")
     .bind(playerId, command, now)
     .run();
+
+  if (isStaff(playerId)) return false;
 
   const windowStart = now - ANTISPAM_WINDOW_MS;
   const row = await db
