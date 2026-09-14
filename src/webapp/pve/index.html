@@ -5,12 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>مبارزه با دشمن</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="stylesheet" href="/shared/battleScene.css" />
+<script src="/shared/characterAssets.js"></script>
+<script src="/shared/battleScene.js"></script>
 <style>
   body { font-family: sans-serif; background: #111; color: #eee; padding: 12px; margin: 0; }
-  .fighter { border: 1px solid #444; border-radius: 8px; padding: 10px; margin-bottom: 10px; }
-  .bar-row { display: flex; justify-content: space-between; font-size: 14px; margin: 4px 0; }
-  .gear-row { display: flex; gap: 8px; margin-top: 6px; }
-  .gear-box { border: 1px dashed #555; border-radius: 6px; padding: 6px 10px; font-size: 12px; flex: 1; text-align: center; }
   .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
   button { flex: 1; min-width: 70px; padding: 10px; border-radius: 8px; border: none; background: #2a6; color: #fff; font-size: 14px; }
   button:disabled { background: #444; color: #888; }
@@ -24,8 +23,7 @@
 
 <div id="status">در حال بارگذاری...</div>
 
-<div class="fighter" id="you-box"></div>
-<div class="fighter" id="enemy-box"></div>
+<div id="scene"></div>
 
 <div class="actions" id="main-actions">
   <button id="btn-attack">حمله</button>
@@ -58,9 +56,14 @@ tg.expand();
 // تشخیص forest یا dungeon از روی مسیر - چون هر دو از همین فایل استفاده میکنن
 const kind = window.location.pathname.includes("dungeon") ? "dungeon" : "forest";
 const API_BASE = `/api/${kind}`;
+const enemyKind = kind === "forest" ? "forest-enemy" : "dungeon-enemy";
 
 let matchId = null;
 let pendingMainAction = null;
+let lastLogLength = 0;
+
+const scene = new BattleScene(document.getElementById("scene"));
+scene.setBackground(kind);
 
 function el(id) { return document.getElementById(id); }
 
@@ -78,24 +81,75 @@ async function callApi(path, extra) {
   return data;
 }
 
-function renderFighter(box, fighter, label) {
-  box.innerHTML = `
-    <div><b>${label}</b></div>
-    <div class="bar-row"><span>HP</span><span>${fighter.hp} / ${fighter.hpMax}</span></div>
-    ${fighter.mana !== undefined ? `<div class="bar-row"><span>Mana</span><span>${fighter.mana} / 8</span></div>` : ""}
-    <div class="gear-row">
-      <div class="gear-box">آرمور: ${fighter.armorKey ?? "-"}</div>
-      <div class="gear-box">سلاح: ${fighter.weaponKey ?? "-"}</div>
-    </div>
-  `;
+// چون لاگ‌های pve همیشه با «شما» یا «دشمن» شروع میشن (برخلاف duel که آیدی عددی داره)،
+// تشخیص طرف ماجرا خیلی ساده‌تره - نیازی به تغییر بک‌اند نیست
+function playAnimationsForNewLog(log) {
+  if (!Array.isArray(log)) return;
+  const newLines = log.slice(lastLogLength);
+  lastLogLength = log.length;
+
+  for (const line of newLines) {
+    if (line.includes("این دشمن هنوز قابل ضربه زدن نیست")) {
+      scene.slot("left").playAction("attack");
+    } else if (line.includes("آلتیمیت شما روی این دشمن اثر نکرد")) {
+      scene.slot("left").playAction("ultimate");
+    } else if (line.startsWith("شما") && line.includes("ضربه زدید")) {
+      scene.slot("left").playAction("attack");
+      scene.slot("right").flashHit();
+      scene.playSound("attack_hit");
+    } else if (line.startsWith("شما") && line.includes("دفاع کردید")) {
+      scene.slot("left").playAction("defend");
+      scene.slot("right").flashHit();
+      scene.playSound("defend_block");
+    } else if (line.startsWith("دفاع شما اشتباه بود")) {
+      scene.slot("right").playAction("attack");
+      scene.slot("left").flashHit();
+    } else if (line.startsWith("دشمن حمله‌ی شما") && line.includes("دفع کرد")) {
+      scene.slot("right").playAction("defend");
+      scene.slot("left").flashHit();
+      scene.playSound("defend_block");
+    } else if (line.startsWith("دشمن هم‌زمان به")) {
+      scene.slot("right").playAction("attack");
+      scene.slot("left").flashHit();
+    } else if (line.startsWith("آلتیمیت شما") && line.includes("دمیج به دشمن زد")) {
+      scene.slot("left").playAction("ultimate");
+      scene.slot("right").flashHit();
+      scene.playSound("ultimate");
+    } else if (line.startsWith("شما") && line.includes("دمیج تاخیری گرفتید")) {
+      scene.slot("left").flashHit();
+    } else if (line.startsWith("دشمن") && line.includes("دمیج تاخیری گرفت")) {
+      scene.slot("right").flashHit();
+    } else if (line.includes("شما دوئل مرگ را بردید")) {
+      scene.slot("left").playAction("attack");
+      scene.slot("right").flashHit();
+    } else if (line.includes("دشمن دوئل مرگ را برد")) {
+      scene.slot("right").playAction("attack");
+      scene.slot("left").flashHit();
+    }
+  }
 }
 
-function renderEnemy(box, cpu) {
-  box.innerHTML = `
-    <div><b>${cpu.definition?.key ?? "دشمن"}</b></div>
-    <div class="bar-row"><span>HP</span><span>${cpu.hp} / ${cpu.hpMax}</span></div>
-    ${cpu.isVulnerable === false ? `<div class="bar-row"><span>⚠️ غیرقابل ضربه</span></div>` : ""}
-  `;
+function renderScene(state) {
+  scene.slot("left").setCharacter("race", state.player.race);
+  scene.slot("left").setGear(state.player.armorKey, state.player.weaponKey);
+  scene.updateHud("left", {
+    level: state.player.level,
+    hp: state.player.hp,
+    hpMax: state.player.hpMax,
+    mana: state.player.mana,
+    manaMax: 8,
+    label: state.player.name ?? "شما",
+  });
+
+  scene.slot("right").setCharacter(enemyKind, state.cpu.definition.key);
+  scene.slot("right").setGear(null, null);
+  scene.updateHud("right", {
+    hp: state.cpu.hp,
+    hpMax: state.cpu.hpMax,
+    label: state.cpu.isVulnerable === false ? "⚠️ غیرقابل ضربه" : "",
+  });
+
+  playAnimationsForNewLog(state.log ?? []);
 }
 
 function renderLog(log) {
@@ -103,8 +157,7 @@ function renderLog(log) {
 }
 
 function renderState(state) {
-  renderFighter(el("you-box"), state.player, "شما");
-  renderEnemy(el("enemy-box"), state.cpu);
+  renderScene(state);
   renderLog(state.log);
   el("status").textContent = "نوبت شماست";
   setActionButtonsDisabled(false);
@@ -117,6 +170,7 @@ function setActionButtonsDisabled(disabled) {
 }
 
 async function startMatch() {
+  lastLogLength = 0;
   const data = await callApi("start", {});
   if (!data) return;
   matchId = data.matchId;
@@ -144,9 +198,11 @@ async function handleActionResult(data) {
       if (data.reward.levelUp?.leveledUp) msg += ` — لول شما به ${data.reward.levelUp.newLevel} رسید!`;
     }
     el("status").textContent = msg;
+    scene.playSound("win");
     endMatchUi();
   } else if (data.outcome === "player_lost") {
     el("status").textContent = "💀 شما باختید.";
+    scene.playSound("lose");
     endMatchUi();
   }
 }
@@ -167,8 +223,10 @@ async function handleDeathDuelResult(data) {
       msg += ` (+${data.reward.fcGained} FC، +${data.reward.xpGained} XP)`;
     }
     el("status").textContent = msg;
+    scene.playSound("win");
   } else {
     el("status").textContent = "💀 شما دوئل مرگ رو باختید.";
+    scene.playSound("lose");
   }
   endMatchUi();
 }
