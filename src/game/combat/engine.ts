@@ -22,11 +22,14 @@ import { getArmorDamageReduction, getWeaponDamageBonus } from "./equipment";
 export function createFighterState(
   id: number | "cpu",
   race: Race,
-  opts?: { hpMax?: number; armorKey?: string | null; weaponKey?: string | null }
+  opts?: { hpMax?: number; armorKey?: string | null; weaponKey?: string | null; level?: number; name?: string; house?: string }
 ): FighterState {
   return {
     id,
     race,
+    level: opts?.level ?? 1,
+    name: opts?.name,
+    house: opts?.house,
     hp: opts?.hpMax ?? HP_MAX_BASE,
     mana: 0,
     hpMax: opts?.hpMax ?? HP_MAX_BASE,
