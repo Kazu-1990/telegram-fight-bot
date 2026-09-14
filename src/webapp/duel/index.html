@@ -5,12 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>مبارزه</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="stylesheet" href="/shared/battleScene.css" />
+<script src="/shared/characterAssets.js"></script>
+<script src="/shared/battleScene.js"></script>
 <style>
   body { font-family: sans-serif; background: #111; color: #eee; padding: 12px; margin: 0; }
-  .fighter { border: 1px solid #444; border-radius: 8px; padding: 10px; margin-bottom: 10px; }
-  .bar-row { display: flex; justify-content: space-between; font-size: 14px; margin: 4px 0; }
-  .gear-row { display: flex; gap: 8px; margin-top: 6px; }
-  .gear-box { border: 1px dashed #555; border-radius: 6px; padding: 6px 10px; font-size: 12px; flex: 1; text-align: center; }
   .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
   button { flex: 1; min-width: 70px; padding: 10px; border-radius: 8px; border: none; background: #2a6; color: #fff; font-size: 14px; }
   button:disabled { background: #444; color: #888; }
@@ -24,8 +23,7 @@
 
 <div id="status">در حال بارگذاری...</div>
 
-<div class="fighter" id="you-box"></div>
-<div class="fighter" id="enemy-box"></div>
+<div id="scene"></div>
 
 <div class="actions" id="main-actions">
   <button id="btn-attack">حمله</button>
@@ -69,6 +67,12 @@ const API_BASE = "/api/duel"; // مسیر روی همون Worker/دامنه
 
 let currentState = null;
 let pendingMainAction = null; // "attack" | "defense" در انتظار انتخاب ناحیه
+let lastLogLength = 0;
+let youId = null;
+let enemyId = null;
+
+const scene = new BattleScene(document.getElementById("scene"));
+scene.setBackground("duel");
 
 function el(id) { return document.getElementById(id); }
 
@@ -86,29 +90,80 @@ async function callApi(path, extra) {
   return data;
 }
 
-function renderFighter(box, fighter, label) {
-  box.innerHTML = `
-    <div><b>${label}</b></div>
-    <div class="bar-row"><span>HP</span><span>${fighter.hp} / ${fighter.hpMax}</span></div>
-    <div class="bar-row"><span>Mana</span><span>${fighter.mana} / 8</span></div>
-    <div class="gear-row">
-      <div class="gear-box">آرمور: ${fighter.armorKey ?? "-"}</div>
-      <div class="gear-box">سلاح: ${fighter.weaponKey ?? "-"}</div>
-    </div>
-  `;
+function sideForId(id) {
+  if (String(id) === String(youId)) return "left";
+  if (String(id) === String(enemyId)) return "right";
+  return null;
+}
+
+// از روی متن فارسیِ راندهای تازه (که از قبل توی combat engine تولید میشن)، حدس میزنیم
+// کدوم طرف چه اکشنی زد تا انیمیشن مناسب پخش بشه - نیازی به تغییر بک‌اند نیست
+function playAnimationsForNewLog(log) {
+  if (!Array.isArray(log)) return;
+  const newLines = log.slice(lastLogLength);
+  lastLogLength = log.length;
+
+  for (const line of newLines) {
+    const ids = [...line.matchAll(/مبارز (\d+)/g)].map((m) => m[1]);
+    if (ids.length === 0) continue;
+    const firstSide = sideForId(ids[0]);
+    const secondSide = ids[1] ? sideForId(ids[1]) : (firstSide === "left" ? "right" : "left");
+
+    if (line.includes("ضربه زد") && !line.includes("دفاع")) {
+      if (firstSide) scene.slot(firstSide).playAction("attack");
+      if (secondSide) { scene.slot(secondSide).playAction("hit"); scene.slot(secondSide).flashHit(); }
+      scene.playSound("attack_hit");
+    } else if (line.includes("را دفاع کرد")) {
+      if (firstSide) scene.slot(firstSide).playAction("defend");
+      if (secondSide) { scene.slot(secondSide).playAction("hit"); scene.slot(secondSide).flashHit(); }
+      scene.playSound("defend_block");
+    } else if (line.includes("آلتیمیت خود را زد")) {
+      if (firstSide) scene.slot(firstSide).playAction("ultimate");
+      if (secondSide) { scene.slot(secondSide).playAction("hit"); scene.slot(secondSide).flashHit(); }
+      scene.playSound("ultimate");
+    } else if (line.includes("را خنثی کرد")) {
+      if (firstSide) scene.slot(firstSide).playAction("defend");
+      scene.playSound("defend_block");
+    } else if (line.includes("پوشن") && line.includes("استفاده کرد")) {
+      if (firstSide) scene.slot(firstSide).playAction("defend"); // یه جلوه‌ی ساده برای مصرف پوشن
+      scene.playSound("potion_use");
+    } else if (line.includes("دمیج تاخیری گرفت")) {
+      if (firstSide) { scene.slot(firstSide).flashHit(); }
+    } else if (line.includes("دوئل مرگ را برد")) {
+      const loserSide = firstSide === "left" ? "right" : "left";
+      if (firstSide) scene.slot(firstSide).playAction("attack");
+      scene.slot(loserSide).flashHit();
+    }
+  }
+}
+
+function renderFighterVisual(side, fighter) {
+  scene.slot(side).setCharacter("race", fighter.race);
+  scene.slot(side).setGear(fighter.armorKey, fighter.weaponKey);
+  scene.updateHud(side, {
+    level: fighter.level,
+    hp: fighter.hp,
+    hpMax: fighter.hpMax,
+    mana: fighter.mana,
+    manaMax: 8,
+    label: `${fighter.name ?? "?"}${fighter.house ? " · " + fighter.house : ""}`,
+  });
 }
 
 function renderLog(log) {
-  el("log").innerHTML = log.slice(-15).map((l) => `<div>${l}</div>`).join("");
+  el("log").innerHTML = (log ?? []).slice(-15).map((l) => `<div>${l}</div>`).join("");
 }
 
 function renderState(state) {
   currentState = state;
   const you = state.fighters[state.yourIndex];
   const enemy = state.fighters[state.yourIndex === 0 ? 1 : 0];
+  youId = you.id;
+  enemyId = enemy.id;
 
-  renderFighter(el("you-box"), you, "شما");
-  renderFighter(el("enemy-box"), enemy, "حریف");
+  renderFighterVisual("left", you);
+  renderFighterVisual("right", enemy);
+  playAnimationsForNewLog(state.log ?? []);
   renderLog(state.log ?? []);
 
   el("death-duel-actions").classList.toggle("hidden", !state.isDeathDuel);
@@ -141,9 +196,9 @@ async function handleOutcome(data) {
   renderState(data.state);
 
   if (data.outcome.status === "winner") {
-    el("status").textContent = data.state.fighters[data.outcome.winnerIndex].id === data.state.fighters[data.state.yourIndex].id
-      ? "🏆 شما بردید!"
-      : "💀 شما باختید.";
+    const youWon = data.state.fighters[data.outcome.winnerIndex].id === data.state.fighters[data.state.yourIndex].id;
+    el("status").textContent = youWon ? "🏆 شما بردید!" : "💀 شما باختید.";
+    scene.playSound(youWon ? "win" : "lose");
     setActionButtonsDisabled(true);
     el("death-duel-actions").classList.add("hidden");
   } else if (data.outcome.status === "death_duel_tie") {
