@@ -130,8 +130,20 @@ export async function handleDuelJoinCallback(ctx: Context, db: D1): Promise<void
   const gear1 = await getEquippedGear(db, p1.telegramId);
   const gear2 = await getEquippedGear(db, p2.telegramId);
 
-  const f1 = createFighterState(p1.telegramId, p1.race, { hpMax: p1.hpMax, ...gear1 });
-  const f2 = createFighterState(p2.telegramId, p2.race, { hpMax: p2.hpMax, ...gear2 });
+  const f1 = createFighterState(p1.telegramId, p1.race, {
+    hpMax: p1.hpMax,
+    level: p1.level,
+    name: p1.name ?? undefined,
+    house: p1.house ?? undefined,
+    ...gear1,
+  });
+  const f2 = createFighterState(p2.telegramId, p2.race, {
+    hpMax: p2.hpMax,
+    level: p2.level,
+    name: p2.name ?? undefined,
+    house: p2.house ?? undefined,
+    ...gear2,
+  });
   const state: CombatState = createCombatState(f1, f2);
   await setMatchState(db, matchId, state);
 
