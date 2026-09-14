@@ -45,7 +45,13 @@ export async function startPveMatch(
 
   const enemyDef = matchType === "forest" ? pickRandomForestEnemy() : pickRandomDungeonEnemy();
   const gear = await getEquippedGear(db, userId);
-  const fighter = createFighterState(userId, player.race, { hpMax: player.hpMax, ...gear });
+  const fighter = createFighterState(userId, player.race, {
+    hpMax: player.hpMax,
+    level: player.level,
+    name: player.name ?? undefined,
+    house: player.house ?? undefined,
+    ...gear,
+  });
   const cpu = createCpuState(enemyDef);
 
   const state: PveCombatState = { round: 1, player: fighter, cpu, log: [], isDeathDuel: false };
