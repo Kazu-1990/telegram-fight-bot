@@ -98,6 +98,9 @@ export type PlayerAction = "attack" | "defense" | "ultimate" | "potion";
 export interface FighterState {
   id: number | "cpu";
   race: Race; // برای تعیین نوع و اثر آلتیمیت لازم است
+  level: number; // برای نمایش در HUD صحنه‌ی مبارزه
+  name?: string; // برای نمایش در HUD - دشمنان CPU این رو ندارن
+  house?: string; // برای نمایش در HUD - دشمنان CPU این رو ندارن
   hp: number;
   mana: number;
   hpMax: number;
