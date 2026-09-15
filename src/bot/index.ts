@@ -17,13 +17,11 @@ import { handleDuelApiRequest } from "../webapp/duel/routes";
 import { handlePveApiRequest } from "../webapp/pve/routes";
 import { handleShopApiRequest } from "../webapp/shop/routes";
 
-// این پنج import متنی نیاز به rule توی wrangler.toml دارن (html/js/css)
+// این سه import متنی نیاز به rule توی wrangler.toml دارن (فقط html)
+// js/css موتور گرافیک دیگه فایل جدا نیستن - مستقیم داخل همین دو html اینلاین شدن
 import DUEL_HTML from "../webapp/duel/index.html";
 import PVE_HTML from "../webapp/pve/index.html";
 import SHOP_HTML from "../webapp/shop/index.html";
-import CHARACTER_ASSETS_JS from "../webapp/shared/characterAssets.js";
-import BATTLE_SCENE_JS from "../webapp/shared/battleScene.js";
-import BATTLE_SCENE_CSS from "../webapp/shared/battleScene.css";
 
 type D1 = any;
 
@@ -93,14 +91,6 @@ function serveHtml(html: string): Response {
   return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
 }
 
-function serveJs(js: string): Response {
-  return new Response(js, { headers: { "Content-Type": "application/javascript; charset=utf-8" } });
-}
-
-function serveCss(css: string): Response {
-  return new Response(css, { headers: { "Content-Type": "text/css; charset=utf-8" } });
-}
-
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -133,12 +123,6 @@ export default {
       if (url.pathname === "/duel") return serveHtml(DUEL_HTML);
       if (url.pathname === "/forest" || url.pathname === "/dungeon") return serveHtml(PVE_HTML);
       if (url.pathname === "/shop") return serveHtml(SHOP_HTML);
-
-      // فایل‌های مشترک گرافیک/انیمیشن صحنه‌ی مبارزه - وقتی عکس‌های واقعی رو پیدا کردی،
-      // فقط characterAssets.js رو ویرایش کن، این مسیرها نیاز به تغییر ندارن
-      if (url.pathname === "/shared/characterAssets.js") return serveJs(CHARACTER_ASSETS_JS);
-      if (url.pathname === "/shared/battleScene.js") return serveJs(BATTLE_SCENE_JS);
-      if (url.pathname === "/shared/battleScene.css") return serveCss(BATTLE_SCENE_CSS);
     }
 
     // ---------- وبهوک تلگرام ----------
