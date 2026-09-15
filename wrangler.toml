@@ -15,7 +15,7 @@ database_id = "7d9fef2f-fa64-4a47-871d-fbe3167ad554"           # خروجی دس
 # داخلی پکیج grammy (که خودشون .js هستن) تداخل میکنه و کل بیلد خراب میشه
 [[rules]]
 type = "Text"
-globs = ["**/*.html", "src/webapp/shared/*.js", "src/webapp/shared/*.css"]
+globs = ["**/*.html", "**/webapp/shared/*.js", "**/webapp/shared/*.css"]
 fallthrough = true
 
 # متغیرهای محرمانه (BOT_TOKEN و BOT_WEBHOOK_SECRET) اینجا نیستن چون توی گیت نباید کامیت بشن.
