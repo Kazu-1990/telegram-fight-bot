@@ -5,9 +5,522 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>مبارزه</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="/shared/battleScene.css" />
-<script src="/shared/characterAssets.js"></script>
-<script src="/shared/battleScene.js"></script>
+<style>
+/* =========================================================
+   استایل صحنه‌ی مبارزه - پیکسل‌آرت مدرن
+   ========================================================= */
+
+.bs-root {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  background-size: cover;
+  background-position: center;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  font-family: "Press Start 2P", monospace;
+}
+.bs-root.bs-bg-fallback {
+  background-color: #1b1f2a; /* اگه بک‌گراند واقعی نبود، این رنگ ساده جایگزینه */
+}
+
+.bs-hud-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 6px;
+  z-index: 3;
+  gap: 8px;
+}
+.bs-hud {
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 9px;
+  color: #fff;
+  width: 45%;
+}
+.bs-hud-right { text-align: right; }
+.bs-hud-name { display: flex; justify-content: space-between; margin-bottom: 3px; }
+.bs-hud-level { color: #ffd25a; }
+.bs-hp-bar {
+  height: 6px;
+  background: #3a1414;
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid #000;
+}
+.bs-hp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4caf50, #8bc34a);
+  transition: width 0.3s ease;
+}
+.bs-hp-text { font-size: 7px; margin-top: 2px; color: #ddd; }
+.bs-mana-row { display: flex; gap: 2px; margin-top: 3px; }
+.bs-hud-right .bs-mana-row { justify-content: flex-end; }
+.bs-mana-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #223;
+  border: 1px solid #556;
+  display: inline-block;
+}
+.bs-mana-dot.filled { background: #4fc3f7; border-color: #81d4fa; }
+
+.bs-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 0 6%;
+  box-sizing: border-box;
+}
+
+.bs-fighter {
+  position: relative;
+  width: 38%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.bs-fighter-right { align-items: center; }
+
+.bs-gear-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.bs-gear {
+  width: 26px;
+  height: 26px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.bs-gear.bs-gear-empty { opacity: 0.35; }
+.bs-gear img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+
+.bs-sprite-wrap {
+  width: 110px;
+  height: 130px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.bs-fighter-right .bs-sprite-wrap { transform: scaleX(-1); } /* حریف/دشمن رو به سمت چپ برمی‌گردونه */
+
+.bs-sprite {
+  max-width: 100%;
+  max-height: 100%;
+  image-rendering: pixelated;
+}
+
+.bs-placeholder {
+  width: 90px;
+  height: 110px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 9px;
+  text-align: center;
+  padding: 6px;
+  box-sizing: border-box;
+  border: 2px dashed rgba(255, 255, 255, 0.4);
+}
+
+.bs-name-tag {
+  margin-top: 4px;
+  font-size: 8px;
+  color: #eee;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* ---------- انیمیشن‌های فالبک برای دشمنانی که فقط idle دارن ---------- */
+@keyframes bs-lunge {
+  0% { transform: translateX(0); }
+  40% { transform: translateX(-14px) scale(1.05); }
+  100% { transform: translateX(0); }
+}
+.bs-fighter-right .bs-sprite-wrap.bs-fx-lunge { animation: bs-lunge 0.35s ease; }
+.bs-fighter-left .bs-sprite-wrap.bs-fx-lunge {
+  animation: bs-lunge 0.35s ease;
+  animation-direction: reverse;
+}
+
+@keyframes bs-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+.bs-sprite-wrap.bs-fx-shake { animation: bs-shake 0.3s ease; }
+
+@keyframes bs-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+.bs-sprite-wrap.bs-fx-pulse { animation: bs-pulse 0.3s ease; }
+
+@keyframes bs-flash {
+  0% { filter: brightness(1); }
+  30% { filter: brightness(2.2) saturate(0) sepia(1) hue-rotate(-50deg); }
+  100% { filter: brightness(1); }
+}
+.bs-sprite-wrap.bs-fx-flash, .bs-sprite-wrap.bs-fx-flash img, .bs-sprite-wrap.bs-fx-flash .bs-placeholder {
+  animation: bs-flash 0.35s ease;
+}
+
+</style>
+<script>
+// =========================================================
+// کاتالوگ گرافیک - تنها فایلی که بعداً برای جایگزین کردن عکس‌های واقعی لازمه دست بزنی
+// =========================================================
+//
+// فرمت هر انیمیشن: یک آرایه از مسیر عکس (فریم‌ها). اگه فایلی که آدرس دادی پیدا نشه
+// (چون هنوز نذاشتیش)، خودکار یه باکس رنگی جایگزین با اسم روش نشون داده میشه - یعنی
+// همین الان هم صحنه کامل کار میکنه، فقط با placeholder به‌جای عکس واقعی.
+//
+// وقتی عکس واقعی پیدا کردی:
+//   ۱) فایل رو دقیقاً با همین مسیر (یا مسیر دلخواه خودت) توی پوشه‌ی public بذار
+//   ۲) اگه تعداد فریم‌هات فرق داشت، فقط آرایه رو اینجا آپدیت کن
+//   ۳) هیچ فایل دیگه‌ای (battleScene.js یا index.html ها) نیاز به تغییر نداره
+//
+// اندازه‌ی پیشنهادی هر فریم: ۲۵۶×۲۵۶ یا ۱۲۸×۱۲۸ پیکسل، PNG با پس‌زمینه‌ی شفاف (آلفا)
+// تا روی صحنه درست بشینه، نه یه عکس مربعی با پس‌زمینه‌ی خودش.
+
+const RACE_ASSETS = {
+  werewolf: {
+    label: "گرگینه",
+    color: "#6b4a2f",
+    frames: {
+      idle: ["/assets/characters/werewolf/idle_1.png", "/assets/characters/werewolf/idle_2.png"],
+      attack: ["/assets/characters/werewolf/attack_1.png", "/assets/characters/werewolf/attack_2.png"],
+      defend: ["/assets/characters/werewolf/defend_1.png"],
+      hit: ["/assets/characters/werewolf/hit_1.png"],
+      ultimate: ["/assets/characters/werewolf/ultimate_1.png", "/assets/characters/werewolf/ultimate_2.png"],
+    },
+  },
+  vampire: {
+    label: "وامپایر",
+    color: "#5b1a2b",
+    frames: {
+      idle: ["/assets/characters/vampire/idle_1.png", "/assets/characters/vampire/idle_2.png"],
+      attack: ["/assets/characters/vampire/attack_1.png", "/assets/characters/vampire/attack_2.png"],
+      defend: ["/assets/characters/vampire/defend_1.png"],
+      hit: ["/assets/characters/vampire/hit_1.png"],
+      ultimate: ["/assets/characters/vampire/ultimate_1.png", "/assets/characters/vampire/ultimate_2.png"],
+    },
+  },
+  elf: {
+    label: "الف",
+    color: "#2f6b4a",
+    frames: {
+      idle: ["/assets/characters/elf/idle_1.png", "/assets/characters/elf/idle_2.png"],
+      attack: ["/assets/characters/elf/attack_1.png", "/assets/characters/elf/attack_2.png"],
+      defend: ["/assets/characters/elf/defend_1.png"],
+      hit: ["/assets/characters/elf/hit_1.png"],
+      ultimate: ["/assets/characters/elf/ultimate_1.png", "/assets/characters/elf/ultimate_2.png"],
+    },
+  },
+  witcher: {
+    label: "ویچر",
+    color: "#4a4a4a",
+    frames: {
+      idle: ["/assets/characters/witcher/idle_1.png", "/assets/characters/witcher/idle_2.png"],
+      attack: ["/assets/characters/witcher/attack_1.png", "/assets/characters/witcher/attack_2.png"],
+      defend: ["/assets/characters/witcher/defend_1.png"],
+      hit: ["/assets/characters/witcher/hit_1.png"],
+      ultimate: ["/assets/characters/witcher/ultimate_1.png", "/assets/characters/witcher/ultimate_2.png"],
+    },
+  },
+};
+
+// دشمنان CPU فقط فریم idle دارن - حمله‌شون به‌جای انیمیشن اختصاصی، یه جلوه‌ی ساده (تکون/فلش) میگیره
+const FOREST_ENEMY_ASSETS = {
+  snake: { label: "مار", color: "#3d6b2f", frames: { idle: ["/assets/enemies/snake/idle_1.png"] } },
+  boar: { label: "گراز", color: "#5c4326", frames: { idle: ["/assets/enemies/boar/idle_1.png"] } },
+  wolf: { label: "گرگ", color: "#4a4a52", frames: { idle: ["/assets/enemies/wolf/idle_1.png"] } },
+  bear: { label: "خرس", color: "#5c3d26", frames: { idle: ["/assets/enemies/bear/idle_1.png"] } },
+};
+
+const DUNGEON_ENEMY_ASSETS = {
+  skeleton: { label: "اسکلت", color: "#c9c9b8", frames: { idle: ["/assets/enemies/skeleton/idle_1.png"] } },
+  goblin: { label: "گابلین", color: "#4f6b2f", frames: { idle: ["/assets/enemies/goblin/idle_1.png"] } },
+  ghost: { label: "شبح", color: "#7a8fa6", frames: { idle: ["/assets/enemies/ghost/idle_1.png"] } },
+  demon: { label: "دیو", color: "#6b1f1f", frames: { idle: ["/assets/enemies/demon/idle_1.png"] } },
+};
+
+const GEAR_ICONS = {
+  // کلیدها باید دقیقاً با item_key آرمور/سلاح توی constants.ts یکی باشن
+  leather_armor: "/assets/gear/armor/leather_armor.png",
+  chainmail: "/assets/gear/armor/chainmail.png",
+  plate_armor: "/assets/gear/armor/plate_armor.png",
+  dragonbone_armor: "/assets/gear/armor/dragonbone_armor.png",
+  mythic_aegis: "/assets/gear/armor/mythic_aegis.png",
+  rusty_dagger: "/assets/gear/weapon/rusty_dagger.png",
+  steel_sword: "/assets/gear/weapon/steel_sword.png",
+  war_axe: "/assets/gear/weapon/war_axe.png",
+  enchanted_blade: "/assets/gear/weapon/enchanted_blade.png",
+  godslayer: "/assets/gear/weapon/godslayer.png",
+};
+
+const BACKGROUNDS = {
+  duel: "/assets/backgrounds/duel_arena.png",
+  forest: "/assets/backgrounds/forest.png",
+  dungeon: "/assets/backgrounds/dungeon.png",
+};
+
+// صداها - اختیاری؛ اگه فایل نبود، پخش بی‌صدا رد میشه (خطا نمیده)
+const SOUND_EFFECTS = {
+  attack_hit: "/assets/sfx/attack_hit.mp3",
+  defend_block: "/assets/sfx/defend_block.mp3",
+  potion_use: "/assets/sfx/potion_use.mp3",
+  ultimate: "/assets/sfx/ultimate.mp3",
+  win: "/assets/sfx/win.mp3",
+  lose: "/assets/sfx/lose.mp3",
+};
+
+window.GameAssets = {
+  RACE_ASSETS,
+  FOREST_ENEMY_ASSETS,
+  DUNGEON_ENEMY_ASSETS,
+  GEAR_ICONS,
+  BACKGROUNDS,
+  SOUND_EFFECTS,
+};
+
+</script>
+<script>
+// =========================================================
+// موتور نمایش صحنه‌ی مبارزه - انیمیشن فریم به فریم، HUD، افکت جایگزین
+// برای دشمنانی که فقط idle دارن (شبیه فلش/تکون به‌جای انیمیشن کامل)
+//
+// این فایل به characterAssets.js نیاز داره (باید قبلش لود بشه)
+// =========================================================
+
+(function () {
+  const FRAME_DURATION_MS = 160;
+  const ACTION_ANIMATION_ROUNDS = 2; // چندبار فریم‌های حمله/دفاع/آلتیمیت تکرار بشن قبل برگشت به idle
+
+  function getAssetEntry(kind, key) {
+    const A = window.GameAssets;
+    if (kind === "race") return A.RACE_ASSETS[key];
+    if (kind === "forest-enemy") return A.FOREST_ENEMY_ASSETS[key];
+    if (kind === "dungeon-enemy") return A.DUNGEON_ENEMY_ASSETS[key];
+    return null;
+  }
+
+  function buildPlaceholder(label, color) {
+    const div = document.createElement("div");
+    div.className = "bs-placeholder";
+    div.style.background = color || "#444";
+    div.textContent = label || "?";
+    return div;
+  }
+
+  class FighterSlot {
+    constructor(rootEl, side) {
+      this.side = side; // "left" | "right"
+      this.root = rootEl;
+      this.entry = null;
+      this.currentAction = "idle";
+      this.frameTimer = null;
+      this.frameIndex = 0;
+
+      this.root.innerHTML = `
+        <div class="bs-gear-row">
+          <div class="bs-gear bs-gear-armor"></div>
+          <div class="bs-gear bs-gear-weapon"></div>
+        </div>
+        <div class="bs-sprite-wrap"></div>
+        <div class="bs-name-tag"></div>
+      `;
+      this.spriteWrap = this.root.querySelector(".bs-sprite-wrap");
+      this.armorBox = this.root.querySelector(".bs-gear-armor");
+      this.weaponBox = this.root.querySelector(".bs-gear-weapon");
+      this.nameTag = this.root.querySelector(".bs-name-tag");
+    }
+
+    setCharacter(kind, key, label) {
+      this.entry = getAssetEntry(kind, key);
+      this.kind = kind;
+      this.key = key;
+      this.nameTag.textContent = label || (this.entry ? this.entry.label : key || "?");
+      this.playAction("idle");
+    }
+
+    setGear(armorKey, weaponKey) {
+      this._setGearBox(this.armorBox, armorKey);
+      this._setGearBox(this.weaponBox, weaponKey);
+    }
+
+    _setGearBox(box, key) {
+      box.innerHTML = "";
+      if (!key) {
+        box.classList.add("bs-gear-empty");
+        return;
+      }
+      box.classList.remove("bs-gear-empty");
+      const iconUrl = window.GameAssets.GEAR_ICONS[key];
+      const img = document.createElement("img");
+      img.src = iconUrl || "";
+      img.alt = key;
+      img.onerror = () => {
+        box.innerHTML = "";
+        box.appendChild(buildPlaceholder(key.slice(0, 2).toUpperCase(), "#333"));
+      };
+      box.appendChild(img);
+    }
+
+    // action: idle | attack | defend | hit | ultimate
+    playAction(action) {
+      clearTimeout(this.frameTimer);
+      this.currentAction = action;
+      this.frameIndex = 0;
+
+      const frames = this.entry?.frames?.[action];
+
+      if (!frames || frames.length === 0) {
+        // این کاراکتر (معمولاً دشمن CPU) فریم اختصاصی برای این اکشن نداره
+        // به‌جای انیمیشن واقعی، یه جلوه‌ی ساده (تکون/فلش) میزنیم و روی idle می‌مونیم
+        this._renderFrame(this.entry?.frames?.idle?.[0], this.entry?.label, this.entry?.color);
+        this._playFallbackEffect(action);
+        return;
+      }
+
+      this._cycleFrames(frames, action === "idle" ? Infinity : ACTION_ANIMATION_ROUNDS, () => {
+        if (action !== "idle") this.playAction("idle");
+      });
+    }
+
+    _cycleFrames(frames, maxLoops, onDone) {
+      let loops = 0;
+      const step = () => {
+        this._renderFrame(frames[this.frameIndex % frames.length], this.entry?.label, this.entry?.color);
+        this.frameIndex++;
+        if (this.frameIndex % frames.length === 0) loops++;
+        if (loops >= maxLoops) {
+          onDone && onDone();
+          return;
+        }
+        this.frameTimer = setTimeout(step, FRAME_DURATION_MS);
+      };
+      step();
+    }
+
+    _renderFrame(src, label, color) {
+      this.spriteWrap.innerHTML = "";
+      if (!src) {
+        this.spriteWrap.appendChild(buildPlaceholder(label, color));
+        return;
+      }
+      const img = document.createElement("img");
+      img.className = "bs-sprite";
+      img.src = src;
+      img.onerror = () => {
+        this.spriteWrap.innerHTML = "";
+        this.spriteWrap.appendChild(buildPlaceholder(label, color));
+      };
+      this.spriteWrap.appendChild(img);
+    }
+
+    _playFallbackEffect(action) {
+      const el = this.spriteWrap;
+      el.classList.remove("bs-fx-lunge", "bs-fx-shake", "bs-fx-pulse");
+      // ری‌فلو اجباری تا انیمیشن دوباره از اول اجرا بشه حتی اگه پشت‌سرهم صدا زده بشه
+      void el.offsetWidth;
+      if (action === "attack" || action === "ultimate") el.classList.add("bs-fx-lunge");
+      else if (action === "defend") el.classList.add("bs-fx-pulse");
+      else if (action === "hit") el.classList.add("bs-fx-shake");
+    }
+
+    flashHit() {
+      const el = this.spriteWrap;
+      el.classList.remove("bs-fx-flash");
+      void el.offsetWidth;
+      el.classList.add("bs-fx-flash");
+    }
+  }
+
+  class BattleScene {
+    constructor(rootEl) {
+      this.root = rootEl;
+      this.root.classList.add("bs-root");
+      this.root.innerHTML = `
+        <div class="bs-hud-row">
+          <div class="bs-hud bs-hud-left"></div>
+          <div class="bs-hud bs-hud-right"></div>
+        </div>
+        <div class="bs-stage">
+          <div class="bs-fighter bs-fighter-left"></div>
+          <div class="bs-fighter bs-fighter-right"></div>
+        </div>
+      `;
+      this.stage = this.root.querySelector(".bs-stage");
+      this.hudLeft = this.root.querySelector(".bs-hud-left");
+      this.hudRight = this.root.querySelector(".bs-hud-right");
+      this.left = new FighterSlot(this.root.querySelector(".bs-fighter-left"), "left");
+      this.right = new FighterSlot(this.root.querySelector(".bs-fighter-right"), "right");
+    }
+
+    setBackground(bgKey) {
+      const url = window.GameAssets.BACKGROUNDS[bgKey];
+      if (url) {
+        this.root.style.backgroundImage = `url(${url})`;
+      }
+      this.root.classList.add("bs-bg-fallback"); // رنگ ساده اگه عکس بک‌گراند نبود، از CSS میاد
+    }
+
+    slot(side) {
+      return side === "left" ? this.left : this.right;
+    }
+
+    updateHud(side, { level, hp, hpMax, mana, manaMax, label }) {
+      const hudEl = side === "left" ? this.hudLeft : this.hudRight;
+      const hpPct = Math.max(0, Math.min(100, (hp / hpMax) * 100));
+      const manaMaxDisplay = manaMax ?? 8;
+      let manaDots = "";
+      for (let i = 0; i < manaMaxDisplay; i++) {
+        manaDots += `<span class="bs-mana-dot ${i < mana ? "filled" : ""}"></span>`;
+      }
+      hudEl.innerHTML = `
+        <div class="bs-hud-name">${label ?? ""} <span class="bs-hud-level">Lv.${level ?? "-"}</span></div>
+        <div class="bs-hp-bar"><div class="bs-hp-fill" style="width:${hpPct}%"></div></div>
+        <div class="bs-hp-text">${Math.max(0, hp)}/${hpMax}</div>
+        ${mana !== undefined ? `<div class="bs-mana-row">${manaDots}</div>` : ""}
+      `;
+    }
+
+    playSound(key) {
+      const url = window.GameAssets.SOUND_EFFECTS[key];
+      if (!url) return;
+      try {
+        const audio = new Audio(url);
+        audio.volume = 0.6;
+        audio.play().catch(() => {}); // اگه فایل نبود یا مرورگر اجازه نداد، بی‌سروصدا رد شو
+      } catch {
+        // نادیده بگیر - صدا اختیاریه
+      }
+    }
+  }
+
+  window.BattleScene = BattleScene;
+})();
+
+</script>
 <style>
   body { font-family: sans-serif; background: #111; color: #eee; padding: 12px; margin: 0; }
   .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
