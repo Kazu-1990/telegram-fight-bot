@@ -1,0 +1,176 @@
+/* =========================================================
+   استایل صحنه‌ی مبارزه - پیکسل‌آرت مدرن
+   ========================================================= */
+
+.bs-root {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  background-size: cover;
+  background-position: center;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  font-family: "Press Start 2P", monospace;
+}
+.bs-root.bs-bg-fallback {
+  background-color: #1b1f2a; /* اگه بک‌گراند واقعی نبود، این رنگ ساده جایگزینه */
+}
+
+.bs-hud-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 6px;
+  z-index: 3;
+  gap: 8px;
+}
+.bs-hud {
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 9px;
+  color: #fff;
+  width: 45%;
+}
+.bs-hud-right { text-align: right; }
+.bs-hud-name { display: flex; justify-content: space-between; margin-bottom: 3px; }
+.bs-hud-level { color: #ffd25a; }
+.bs-hp-bar {
+  height: 6px;
+  background: #3a1414;
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid #000;
+}
+.bs-hp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4caf50, #8bc34a);
+  transition: width 0.3s ease;
+}
+.bs-hp-text { font-size: 7px; margin-top: 2px; color: #ddd; }
+.bs-mana-row { display: flex; gap: 2px; margin-top: 3px; }
+.bs-hud-right .bs-mana-row { justify-content: flex-end; }
+.bs-mana-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #223;
+  border: 1px solid #556;
+  display: inline-block;
+}
+.bs-mana-dot.filled { background: #4fc3f7; border-color: #81d4fa; }
+
+.bs-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 0 6%;
+  box-sizing: border-box;
+}
+
+.bs-fighter {
+  position: relative;
+  width: 38%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.bs-fighter-right { align-items: center; }
+
+.bs-gear-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.bs-gear {
+  width: 26px;
+  height: 26px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.bs-gear.bs-gear-empty { opacity: 0.35; }
+.bs-gear img { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+
+.bs-sprite-wrap {
+  width: 110px;
+  height: 130px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.bs-fighter-right .bs-sprite-wrap { transform: scaleX(-1); } /* حریف/دشمن رو به سمت چپ برمی‌گردونه */
+
+.bs-sprite {
+  max-width: 100%;
+  max-height: 100%;
+  image-rendering: pixelated;
+}
+
+.bs-placeholder {
+  width: 90px;
+  height: 110px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 9px;
+  text-align: center;
+  padding: 6px;
+  box-sizing: border-box;
+  border: 2px dashed rgba(255, 255, 255, 0.4);
+}
+
+.bs-name-tag {
+  margin-top: 4px;
+  font-size: 8px;
+  color: #eee;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* ---------- انیمیشن‌های فالبک برای دشمنانی که فقط idle دارن ---------- */
+@keyframes bs-lunge {
+  0% { transform: translateX(0); }
+  40% { transform: translateX(-14px) scale(1.05); }
+  100% { transform: translateX(0); }
+}
+.bs-fighter-right .bs-sprite-wrap.bs-fx-lunge { animation: bs-lunge 0.35s ease; }
+.bs-fighter-left .bs-sprite-wrap.bs-fx-lunge {
+  animation: bs-lunge 0.35s ease;
+  animation-direction: reverse;
+}
+
+@keyframes bs-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+.bs-sprite-wrap.bs-fx-shake { animation: bs-shake 0.3s ease; }
+
+@keyframes bs-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+.bs-sprite-wrap.bs-fx-pulse { animation: bs-pulse 0.3s ease; }
+
+@keyframes bs-flash {
+  0% { filter: brightness(1); }
+  30% { filter: brightness(2.2) saturate(0) sepia(1) hue-rotate(-50deg); }
+  100% { filter: brightness(1); }
+}
+.bs-sprite-wrap.bs-fx-flash, .bs-sprite-wrap.bs-fx-flash img, .bs-sprite-wrap.bs-fx-flash .bs-placeholder {
+  animation: bs-flash 0.35s ease;
+}
