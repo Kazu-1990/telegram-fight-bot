@@ -182,8 +182,8 @@ el("btn-craft").onclick = async () => {
   if (data.error) return;
 
   if (data.success) showMsg(`✅ پوشن ساخته شد: ${data.potionKey}`);
-  else if (data.reason === "no_match") showMsg("❌ این ترکیب هیچ پوشنی نمی‌سازد.");
-  else if (data.reason === "inventory_full") showMsg("❌ اینونتوری پوشن شما جا ندارد.");
+  else if (data.reason === "no_match") showMsg("❌ این ترکیب نتیجه‌ای نداشت. موادش مصرف شد و FC هم برنمی‌گردد.");
+  else if (data.reason === "inventory_full") showMsg("❌ اینونتوری پوشن شما جا ندارد (مواد و FC مصرف شد).");
 
   loadCraftTab();
 };
