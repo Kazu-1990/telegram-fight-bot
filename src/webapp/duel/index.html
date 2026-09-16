@@ -201,59 +201,65 @@
 // اندازه‌ی پیشنهادی هر فریم: ۲۵۶×۲۵۶ یا ۱۲۸×۱۲۸ پیکسل، PNG با پس‌زمینه‌ی شفاف (آلفا)
 // تا روی صحنه درست بشینه، نه یه عکس مربعی با پس‌زمینه‌ی خودش.
 
+// آدرس پایه‌ی عکس‌ها روی گیت‌هاب - وقتی عکس جدید اضافه کردی یا اسم فایل عوض شد، همینجا/پایین‌تر اصلاح کن
+const GH_ASSETS = "https://raw.githubusercontent.com/Kazu-1990/telegram-fight-bot/main/assets/";
+
+// فعلاً هر نژاد فقط یه عکس داره (Left_X1.png) - همون یه عکس رو برای همه‌ی حالت‌ها
+// (idle/attack/defend/hit/ultimate) گذاشتیم تا چیزی بدون عکس نمونه؛ وقتی فریم‌های
+// بیشتر اضافه کردی، فقط همین آرایه‌ها رو تکمیل کن (مثلاً attack_1.png, attack_2.png)
 const RACE_ASSETS = {
   werewolf: {
     label: "گرگینه",
     color: "#6b4a2f",
     frames: {
-      idle: ["/assets/characters/werewolf/idle_1.png", "/assets/characters/werewolf/idle_2.png"],
-      attack: ["/assets/characters/werewolf/attack_1.png", "/assets/characters/werewolf/attack_2.png"],
-      defend: ["/assets/characters/werewolf/defend_1.png"],
-      hit: ["/assets/characters/werewolf/hit_1.png"],
-      ultimate: ["/assets/characters/werewolf/ultimate_1.png", "/assets/characters/werewolf/ultimate_2.png"],
+      idle: [GH_ASSETS + "Left_werewolf1.png"],
+      attack: [GH_ASSETS + "Left_werewolf1.png"],
+      defend: [GH_ASSETS + "Left_werewolf1.png"],
+      hit: [GH_ASSETS + "Left_werewolf1.png"],
+      ultimate: [GH_ASSETS + "Left_werewolf1.png"],
     },
   },
   vampire: {
     label: "وامپایر",
     color: "#5b1a2b",
     frames: {
-      idle: ["/assets/characters/vampire/idle_1.png", "/assets/characters/vampire/idle_2.png"],
-      attack: ["/assets/characters/vampire/attack_1.png", "/assets/characters/vampire/attack_2.png"],
-      defend: ["/assets/characters/vampire/defend_1.png"],
-      hit: ["/assets/characters/vampire/hit_1.png"],
-      ultimate: ["/assets/characters/vampire/ultimate_1.png", "/assets/characters/vampire/ultimate_2.png"],
+      idle: [GH_ASSETS + "Left_vampire1.png"],
+      attack: [GH_ASSETS + "Left_vampire1.png"],
+      defend: [GH_ASSETS + "Left_vampire1.png"],
+      hit: [GH_ASSETS + "Left_vampire1.png"],
+      ultimate: [GH_ASSETS + "Left_vampire1.png"],
     },
   },
   elf: {
     label: "الف",
     color: "#2f6b4a",
     frames: {
-      idle: ["/assets/characters/elf/idle_1.png", "/assets/characters/elf/idle_2.png"],
-      attack: ["/assets/characters/elf/attack_1.png", "/assets/characters/elf/attack_2.png"],
-      defend: ["/assets/characters/elf/defend_1.png"],
-      hit: ["/assets/characters/elf/hit_1.png"],
-      ultimate: ["/assets/characters/elf/ultimate_1.png", "/assets/characters/elf/ultimate_2.png"],
+      idle: [GH_ASSETS + "Left_elf1.png"],
+      attack: [GH_ASSETS + "Left_elf1.png"],
+      defend: [GH_ASSETS + "Left_elf1.png"],
+      hit: [GH_ASSETS + "Left_elf1.png"],
+      ultimate: [GH_ASSETS + "Left_elf1.png"],
     },
   },
   witcher: {
     label: "ویچر",
     color: "#4a4a4a",
     frames: {
-      idle: ["/assets/characters/witcher/idle_1.png", "/assets/characters/witcher/idle_2.png"],
-      attack: ["/assets/characters/witcher/attack_1.png", "/assets/characters/witcher/attack_2.png"],
-      defend: ["/assets/characters/witcher/defend_1.png"],
-      hit: ["/assets/characters/witcher/hit_1.png"],
-      ultimate: ["/assets/characters/witcher/ultimate_1.png", "/assets/characters/witcher/ultimate_2.png"],
+      idle: [GH_ASSETS + "Left_witcher1.png"],
+      attack: [GH_ASSETS + "Left_witcher1.png"],
+      defend: [GH_ASSETS + "Left_witcher1.png"],
+      hit: [GH_ASSETS + "Left_witcher1.png"],
+      ultimate: [GH_ASSETS + "Left_witcher1.png"],
     },
   },
 };
 
 // دشمنان CPU فقط فریم idle دارن - حمله‌شون به‌جای انیمیشن اختصاصی، یه جلوه‌ی ساده (تکون/فلش) میگیره
 const FOREST_ENEMY_ASSETS = {
-  snake: { label: "مار", color: "#3d6b2f", frames: { idle: ["/assets/enemies/snake/idle_1.png"] } },
-  boar: { label: "گراز", color: "#5c4326", frames: { idle: ["/assets/enemies/boar/idle_1.png"] } },
-  wolf: { label: "گرگ", color: "#4a4a52", frames: { idle: ["/assets/enemies/wolf/idle_1.png"] } },
-  bear: { label: "خرس", color: "#5c3d26", frames: { idle: ["/assets/enemies/bear/idle_1.png"] } },
+  snake: { label: "مار", color: "#3d6b2f", frames: { idle: [GH_ASSETS + "Snake.png"] } },
+  boar: { label: "گراز", color: "#5c4326", frames: { idle: [GH_ASSETS + "Boar.png"] } },
+  wolf: { label: "گرگ", color: "#4a4a52", frames: { idle: [GH_ASSETS + "Wolf.png"] } },
+  bear: { label: "خرس", color: "#5c3d26", frames: { idle: [GH_ASSETS + "Bear.png"] } },
 };
 
 const DUNGEON_ENEMY_ASSETS = {
@@ -278,9 +284,9 @@ const GEAR_ICONS = {
 };
 
 const BACKGROUNDS = {
-  duel: "/assets/backgrounds/duel_arena.png",
-  forest: "/assets/backgrounds/forest.png",
-  dungeon: "/assets/backgrounds/dungeon.png",
+  duel: GH_ASSETS + "BG_duel.png",
+  forest: GH_ASSETS + "BG_forest.png",
+  dungeon: GH_ASSETS + "BG_dungeon.png",
 };
 
 // صداها - اختیاری؛ اگه فایل نبود، پخش بی‌صدا رد میشه (خطا نمیده)
