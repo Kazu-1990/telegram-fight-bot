@@ -203,7 +203,7 @@ export const GRAPHICS_ENABLED = false;
 
 // ---------- مینی‌اپ‌ها ----------
 // وقتی روی Cloudflare Pages/Workers دیپلوی کردی، این آدرس رو با دامنه‌ی واقعی عوض کن
-export const WEBAPP_BASE_URL = "https://CHANGE_ME.pages.dev";
+export const WEBAPP_BASE_URL = "https://telegram-fight-bot.fearworld7.workers.dev";
 export const WEBAPP_PATHS = {
   duel: "/duel",
   forest: "/forest",
