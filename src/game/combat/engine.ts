@@ -194,13 +194,13 @@ function resolveOffensiveAction(state: CombatState, actor: FighterState, other: 
   if (act.action === "ultimate") {
     const neutralizedBy = ULTIMATES[actor.race].neutralizedBy;
     const otherNeutralizes = other.pendingAction?.action === "defense" && other.pendingAction.target === neutralizedBy;
+    const effect = getUltimateEffect(actor.race);
 
     if (otherNeutralizes) {
-      state.log.push(`مبارز ${other.id} آلتیمیت مبارز ${actor.id} را خنثی کرد.`);
+      state.log.push(`مبارز ${other.id} آلتیمیت مبارز ${actor.id} را خنثی کرد: ${effect.describeNeutralized()}`);
       return;
     }
 
-    const effect = getUltimateEffect(actor.race);
     const dmg = applyDamage(other, effect.damageToDefender + weaponBonusFor(actor), null);
     if (effect.healAttacker > 0) {
       actor.hp = Math.min(actor.hpMax, actor.hp + effect.healAttacker);
@@ -208,7 +208,7 @@ function resolveOffensiveAction(state: CombatState, actor: FighterState, other: 
     if (effect.delayedDamageToDefender) {
       other.pendingDelayedDamage.push({ ...effect.delayedDamageToDefender });
     }
-    state.log.push(`مبارز ${actor.id} آلتیمیت خود را زد و ${dmg} دمیج وارد کرد.`);
+    state.log.push(`مبارز ${actor.id} آلتیمیت خود را زد: ${effect.describeHit(dmg, effect.healAttacker)}`);
     return;
   }
 }
