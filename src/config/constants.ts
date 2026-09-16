@@ -6,11 +6,11 @@
 // ---------- دسترسی و امنیت ----------
 
 // کد فعال‌سازی گروه‌ها - خودت اینو عوض کن
-export const GROUP_ACTIVATION_CODE = "8486";
+export const GROUP_ACTIVATION_CODE = "CHANGE_ME_1234";
 
 // آیدی عددی کارمندها (فقط اونا به دستورات مدیریتی دسترسی دارن)
 // duel, cancel duel, star, antistar, resetboard, block, unblock
-export const STAFF_IDS: number[] = [ 8104311231
+export const STAFF_IDS: number[] = [
   // مثال: 123456789,
 ];
 
@@ -19,7 +19,7 @@ export function isStaff(userId: number): boolean {
 }
 
 // نام کاربری بات (بدون @) - برای ساخت دیپ‌لینک فعال‌سازی گروه لازمه
-export const BOT_USERNAME = "Fight_castlevania_bot";
+export const BOT_USERNAME = "CHANGE_ME_bot";
 
 // ---------- ضد اسپم ----------
 // فرض منطقی: اگه یه کاربر توی بازه‌ی زمانی کوتاه، تعداد دستور مشخصی بفرسته، اسپمر شناخته میشه
@@ -203,7 +203,7 @@ export const GRAPHICS_ENABLED = false;
 
 // ---------- مینی‌اپ‌ها ----------
 // وقتی روی Cloudflare Pages/Workers دیپلوی کردی، این آدرس رو با دامنه‌ی واقعی عوض کن
-export const WEBAPP_BASE_URL = "https://telegram-fight-bot.fearworld7.workers.dev";
+export const WEBAPP_BASE_URL = "https://CHANGE_ME.pages.dev";
 export const WEBAPP_PATHS = {
   duel: "/duel",
   forest: "/forest",
