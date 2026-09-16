@@ -6,11 +6,11 @@
 // ---------- دسترسی و امنیت ----------
 
 // کد فعال‌سازی گروه‌ها - خودت اینو عوض کن
-export const GROUP_ACTIVATION_CODE = "CHANGE_ME_1234";
+export const GROUP_ACTIVATION_CODE = "8486";
 
 // آیدی عددی کارمندها (فقط اونا به دستورات مدیریتی دسترسی دارن)
 // duel, cancel duel, star, antistar, resetboard, block, unblock
-export const STAFF_IDS: number[] = [
+export const STAFF_IDS: number[] = [ 8104311231
   // مثال: 123456789,
 ];
 
