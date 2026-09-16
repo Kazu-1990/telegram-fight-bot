@@ -624,7 +624,7 @@ function playAnimationsForNewLog(log) {
     } else if (line.startsWith("دشمن هم‌زمان به")) {
       scene.slot("right").playAction("attack");
       scene.slot("left").flashHit();
-    } else if (line.startsWith("آلتیمیت شما") && line.includes("دمیج به دشمن زد")) {
+    } else if (line.startsWith("شما آلتیمیت خود را زدید")) {
       scene.slot("left").playAction("ultimate");
       scene.slot("right").flashHit();
       scene.playSound("ultimate");
