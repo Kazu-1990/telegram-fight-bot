@@ -90,7 +90,14 @@ export async function submitPveAction(
   if (match.status !== "active" || !match.state) return { error: "این مبارزه فعال نیست." };
 
   const state = match.state as unknown as PveCombatState;
-  const outcome = resolvePveRound(state, { action, target });
+
+  let outcome;
+  try {
+    outcome = resolvePveRound(state, { action, target });
+  } catch (e: any) {
+    // مثلا وقتی آلتیمیت با مانای ناقص یا سقف تمام‌شده امتحان بشه - راند مصرف نمیشه
+    return { error: e.message ?? "اکشن نامعتبر" };
+  }
 
   await setMatchState(db, matchId, state as unknown as Record<string, unknown>);
 
