@@ -148,7 +148,7 @@ export const RESOURCE_KEYS = [
 export type ResourceKey = (typeof RESOURCE_KEYS)[number];
 
 // ---------- شاپ - قیمت‌های مجاز فروش پوشن در marketplace ----------
-export const MARKETPLACE_ALLOWED_PRICES_FC = [5, 15, 30, 50, 100] as const;
+export const MARKETPLACE_ALLOWED_PRICES_FC = [25, 50, 100, 150, 200] as const;
 
 // ---------- فورست ----------
 export const FOREST_LOSS_COOLDOWN_MS = 30 * 60_000; // ۳۰ دقیقه
