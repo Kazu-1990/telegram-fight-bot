@@ -5,6 +5,7 @@ import { getWeaponDamageBonus } from "./equipment";
 import type { EnemyDefinition } from "../forest/enemies";
 import type { DungeonEnemyDefinition } from "../dungeon/enemies";
 import type { DeathDuelChoice } from "./engine";
+import { canUseUltimate } from "./engine";
 
 export interface CpuState {
   definition: EnemyDefinition | DungeonEnemyDefinition;
@@ -102,6 +103,11 @@ export function resolvePveRound(
     throw new Error("در حالت دوئل مرگ، از resolvePveDeathDuelChoice استفاده کن");
   }
 
+  // این چک قبلاً جا افتاده بود: بدون این، آلتیمیت حتی با مانای ناقص هم قابل استفاده بود
+  if (playerAction.action === "ultimate" && !canUseUltimate(state.player)) {
+    throw new Error("مانا کافی نیست یا سقف استفاده از آلتیمیت تکمیل شده");
+  }
+
   // ۱) دمیج‌های تاخیری راند قبل
   applyDelayedDamageTicks(state);
   let outcome = checkOutcome(state);
@@ -144,15 +150,15 @@ export function resolvePveRound(
     state.player.hp = clamp(state.player.hp - dmgToPlayer, state.player.hpMax);
     state.log.push(`دشمن هم‌زمان به ${cpuTarget} شما ${dmgToPlayer} دمیج زد.`);
   } else if (playerAction.action === "ultimate") {
+    const effect = getUltimateEffect(state.player.race);
     if (!state.cpu.isVulnerable) {
       state.log.push("آلتیمیت شما روی این دشمن اثر نکرد (هنوز قابل ضربه زدن نیست).");
     } else {
-      const effect = getUltimateEffect(state.player.race);
       const dmg = effect.damageToDefender + getWeaponDamageBonus(state.player.weaponKey);
       state.cpu.hp = clamp(state.cpu.hp - dmg, state.cpu.hpMax);
       if (effect.healAttacker > 0) state.player.hp = clamp(state.player.hp + effect.healAttacker, state.player.hpMax);
       if (effect.delayedDamageToDefender) state.cpu.pendingDelayedDamage.push({ ...effect.delayedDamageToDefender });
-      state.log.push(`آلتیمیت شما ${dmg} دمیج به دشمن زد.`);
+      state.log.push(`شما آلتیمیت خود را زدید: ${effect.describeHit(dmg, effect.healAttacker)}`);
     }
 
     state.player.ultimateUsesLeft -= 1;
