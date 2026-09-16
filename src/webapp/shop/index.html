@@ -158,6 +158,8 @@ window.buyListing = async (listingId) => {
 };
 
 // ---------- تب کرفت ----------
+let craftQuantities = {}; // itemKey -> quantity موجود (برای اعتبارسنجی سمت کلاینت)
+
 async function loadCraftTab() {
   const data = await callApi("craft/inventory");
   if (data.error) return;
@@ -165,18 +167,43 @@ async function loadCraftTab() {
   el("craft-cost").textContent = data.costPerAttempt;
   el("craft-min-level").textContent = data.minLevel;
 
+  craftQuantities = {};
+  for (const r of data.resources) craftQuantities[r.itemKey] = r.quantity;
+
   const options = data.resources.length
-    ? data.resources.map((r) => `<option value="${r.itemKey}">${r.itemKey} (${r.quantity})</option>`).join("")
+    ? `<option value="">— انتخاب کنید —</option>` +
+      data.resources.map((r) => `<option value="${r.itemKey}">${r.itemKey} (${r.quantity})</option>`).join("")
     : `<option value="">منبعی ندارید</option>`;
 
   el("craft-slot-1").innerHTML = options;
   el("craft-slot-2").innerHTML = options;
   el("craft-slot-3").innerHTML = options;
+
+  validateCraftSelection();
+}
+
+// دکمه‌ی کرفت فقط وقتی فعاله که هر سه جایگاه پر باشن، سه آیتم متفاوت باشن، و موجودی هرکدوم کافی باشه
+function validateCraftSelection() {
+  const values = [el("craft-slot-1").value, el("craft-slot-2").value, el("craft-slot-3").value];
+  const allFilled = values.every((v) => v);
+  const allDistinct = new Set(values).size === values.length;
+  const allInStock = values.every((v) => (craftQuantities[v] ?? 0) >= 1);
+
+  const valid = allFilled && allDistinct && allInStock;
+  el("btn-craft").disabled = !valid;
+
+  if (allFilled && !allDistinct) {
+    showMsg("⚠️ سه جایگاه باید سه ماده‌ی متفاوت باشن.");
+  }
+}
+
+for (const id of ["craft-slot-1", "craft-slot-2", "craft-slot-3"]) {
+  el(id).addEventListener("change", validateCraftSelection);
 }
 
 el("btn-craft").onclick = async () => {
   const resources = [el("craft-slot-1").value, el("craft-slot-2").value, el("craft-slot-3").value];
-  if (resources.some((r) => !r)) return;
+  if (resources.some((r) => !r) || new Set(resources).size !== 3) return;
 
   const data = await callApi("craft/attempt", { resources });
   if (data.error) return;
