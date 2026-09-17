@@ -19,7 +19,7 @@ export function isStaff(userId: number): boolean {
 }
 
 // نام کاربری بات (بدون @) - برای ساخت دیپ‌لینک فعال‌سازی گروه لازمه
-export const BOT_USERNAME = "CHANGE_ME_bot";
+export const BOT_USERNAME = "Fight_castlevania_bot";
 
 // ---------- ضد اسپم ----------
 // فرض منطقی: اگه یه کاربر توی بازه‌ی زمانی کوتاه، تعداد دستور مشخصی بفرسته، اسپمر شناخته میشه
