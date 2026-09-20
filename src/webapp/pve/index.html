@@ -31,6 +31,7 @@
   left: 0;
   right: 0;
   display: flex;
+  direction: ltr; /* بدون این، چون صفحه RTL هست، چپ/راست HUD برعکس می‌شد */
   justify-content: space-between;
   padding: 6px;
   z-index: 3;
@@ -76,6 +77,7 @@
   position: absolute;
   inset: 0;
   display: flex;
+  direction: ltr; /* بدون این، چون صفحه RTL هست، چپ/راست کرکترها برعکس می‌شد */
   justify-content: space-between;
   align-items: flex-end;
   padding: 0 6%;
@@ -117,7 +119,7 @@
   align-items: flex-end;
   justify-content: center;
 }
-.bs-fighter-right .bs-sprite-wrap { transform: scaleX(-1); } /* حریف/دشمن رو به سمت چپ برمی‌گردونه */
+.bs-sprite-wrap.bs-mirrored { transform: scaleX(-1); } /* فقط کرکترهای نژادی وقتی سمت راستن (حریف duel) - نه حیوانات CPU */
 
 .bs-sprite {
   max-width: 100%;
@@ -365,6 +367,10 @@ window.GameAssets = {
       this.kind = kind;
       this.key = key;
       this.nameTag.textContent = label || (this.entry ? this.entry.label : key || "?");
+      // کرکترهای نژادی (پلیرها) رو به راست ساخته شدن، پس فقط وقتی سمت راست صحنه‌ان
+      // (یعنی حریف توی duel) باید برعکس بشن. حیوانات CPU از اول رو به چپ ساخته شدن
+      // و هیچوقت (چه توی جنگل/دانجن چه هرجای دیگه) نباید mirror بشن.
+      this.spriteWrap.classList.toggle("bs-mirrored", kind === "race" && this.side === "right");
       this.playAction("idle");
     }
 
