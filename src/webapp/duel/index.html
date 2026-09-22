@@ -4,6 +4,9 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>مبارزه</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 /* =========================================================
@@ -149,6 +152,39 @@
   background: rgba(0, 0, 0, 0.4);
   padding: 2px 6px;
   border-radius: 4px;
+}
+
+/* ---------- بنر پیکسلی روی صحنه (آلتیمیت + نتیجه‌ی نهایی) ---------- */
+.bs-banner {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.6);
+  font-family: "Press Start 2P", monospace;
+  line-height: 1.9;
+}
+.bs-banner-title {
+  font-size: clamp(18px, 7vw, 32px);
+  color: #ffd25a;
+  text-shadow: 3px 3px 0 #000;
+  animation: bs-banner-pop 0.35s ease;
+}
+.bs-banner-sub {
+  margin-top: 10px;
+  font-size: clamp(8px, 2.6vw, 12px);
+  color: #eee;
+  text-shadow: 2px 2px 0 #000;
+}
+@keyframes bs-banner-pop {
+  0% { transform: scale(0.4); opacity: 0; }
+  60% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 /* ---------- انیمیشن‌های فالبک برای دشمنانی که فقط idle دارن ---------- */
@@ -480,12 +516,20 @@ window.GameAssets = {
           <div class="bs-fighter bs-fighter-left"></div>
           <div class="bs-fighter bs-fighter-right"></div>
         </div>
+        <div class="bs-banner hidden">
+          <div class="bs-banner-title"></div>
+          <div class="bs-banner-sub"></div>
+        </div>
       `;
       this.stage = this.root.querySelector(".bs-stage");
       this.hudLeft = this.root.querySelector(".bs-hud-left");
       this.hudRight = this.root.querySelector(".bs-hud-right");
       this.left = new FighterSlot(this.root.querySelector(".bs-fighter-left"), "left");
       this.right = new FighterSlot(this.root.querySelector(".bs-fighter-right"), "right");
+      this.banner = this.root.querySelector(".bs-banner");
+      this.bannerTitle = this.root.querySelector(".bs-banner-title");
+      this.bannerSub = this.root.querySelector(".bs-banner-sub");
+      this.bannerHideTimer = null;
     }
 
     setBackground(bgKey) {
@@ -494,6 +538,28 @@ window.GameAssets = {
         this.root.style.backgroundImage = `url(${url})`;
       }
       this.root.classList.add("bs-bg-fallback"); // رنگ ساده اگه عکس بک‌گراند نبود، از CSS میاد
+    }
+
+    // بنر پیکسلی روی صحنه - برای اعلام «آلتیمیت» یا نتیجه‌ی نهایی (برد/باخت + جزئیات)
+    // duration=0 یعنی تا صدا زدن hideBanner همینجا می‌مونه (برای نتیجه‌ی نهایی)
+    showBanner(title, subtitle, duration = 1300) {
+      clearTimeout(this.bannerHideTimer);
+      this.bannerTitle.textContent = title;
+      this.bannerSub.textContent = subtitle || "";
+      this.banner.classList.remove("hidden");
+      // ریست انیمیشن پاپ حتی اگه پشت سر هم صدا زده بشه (مثلا دو آلتیمیت نزدیک به هم)
+      this.bannerTitle.style.animation = "none";
+      void this.bannerTitle.offsetWidth;
+      this.bannerTitle.style.animation = "";
+
+      if (duration > 0) {
+        this.bannerHideTimer = setTimeout(() => this.hideBanner(), duration);
+      }
+    }
+
+    hideBanner() {
+      clearTimeout(this.bannerHideTimer);
+      this.banner.classList.add("hidden");
     }
 
     slot(side) {
@@ -645,9 +711,11 @@ function playAnimationsForNewLog(log) {
     } else if (line.includes("آلتیمیت خود را زد")) {
       if (firstSide) scene.slot(firstSide).playAction("ultimate");
       if (secondSide) { scene.slot(secondSide).playAction("hit"); scene.slot(secondSide).flashHit(); }
+      scene.showBanner("آلتیمیت!");
       scene.playSound("ultimate");
     } else if (line.includes("را خنثی کرد")) {
       if (firstSide) scene.slot(firstSide).playAction("defend");
+      scene.showBanner("آلتیمیت!");
       scene.playSound("defend_block");
     } else if (line.includes("پوشن") && line.includes("استفاده کرد")) {
       if (firstSide) scene.slot(firstSide).playAction("defend"); // یه جلوه‌ی ساده برای مصرف پوشن
@@ -722,7 +790,8 @@ async function handleOutcome(data) {
 
   if (data.outcome.status === "winner") {
     const youWon = data.state.fighters[data.outcome.winnerIndex].id === data.state.fighters[data.state.yourIndex].id;
-    el("status").textContent = youWon ? "🏆 شما بردید!" : "💀 شما باختید.";
+    scene.showBanner(youWon ? "🏆 پیروزی!" : "💀 شکست!", "", 0); // 0 یعنی تا شروع بازی بعدی می‌مونه
+    el("status").textContent = "";
     scene.playSound(youWon ? "win" : "lose");
     setActionButtonsDisabled(true);
     el("death-duel-actions").classList.add("hidden");
