@@ -4,6 +4,9 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>مبارزه با دشمن</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
 /* =========================================================
@@ -149,6 +152,39 @@
   background: rgba(0, 0, 0, 0.4);
   padding: 2px 6px;
   border-radius: 4px;
+}
+
+/* ---------- بنر پیکسلی روی صحنه (آلتیمیت + نتیجه‌ی نهایی) ---------- */
+.bs-banner {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.6);
+  font-family: "Press Start 2P", monospace;
+  line-height: 1.9;
+}
+.bs-banner-title {
+  font-size: clamp(18px, 7vw, 32px);
+  color: #ffd25a;
+  text-shadow: 3px 3px 0 #000;
+  animation: bs-banner-pop 0.35s ease;
+}
+.bs-banner-sub {
+  margin-top: 10px;
+  font-size: clamp(8px, 2.6vw, 12px);
+  color: #eee;
+  text-shadow: 2px 2px 0 #000;
+}
+@keyframes bs-banner-pop {
+  0% { transform: scale(0.4); opacity: 0; }
+  60% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 /* ---------- انیمیشن‌های فالبک برای دشمنانی که فقط idle دارن ---------- */
@@ -480,12 +516,20 @@ window.GameAssets = {
           <div class="bs-fighter bs-fighter-left"></div>
           <div class="bs-fighter bs-fighter-right"></div>
         </div>
+        <div class="bs-banner hidden">
+          <div class="bs-banner-title"></div>
+          <div class="bs-banner-sub"></div>
+        </div>
       `;
       this.stage = this.root.querySelector(".bs-stage");
       this.hudLeft = this.root.querySelector(".bs-hud-left");
       this.hudRight = this.root.querySelector(".bs-hud-right");
       this.left = new FighterSlot(this.root.querySelector(".bs-fighter-left"), "left");
       this.right = new FighterSlot(this.root.querySelector(".bs-fighter-right"), "right");
+      this.banner = this.root.querySelector(".bs-banner");
+      this.bannerTitle = this.root.querySelector(".bs-banner-title");
+      this.bannerSub = this.root.querySelector(".bs-banner-sub");
+      this.bannerHideTimer = null;
     }
 
     setBackground(bgKey) {
@@ -494,6 +538,28 @@ window.GameAssets = {
         this.root.style.backgroundImage = `url(${url})`;
       }
       this.root.classList.add("bs-bg-fallback"); // رنگ ساده اگه عکس بک‌گراند نبود، از CSS میاد
+    }
+
+    // بنر پیکسلی روی صحنه - برای اعلام «آلتیمیت» یا نتیجه‌ی نهایی (برد/باخت + جزئیات)
+    // duration=0 یعنی تا صدا زدن hideBanner همینجا می‌مونه (برای نتیجه‌ی نهایی)
+    showBanner(title, subtitle, duration = 1300) {
+      clearTimeout(this.bannerHideTimer);
+      this.bannerTitle.textContent = title;
+      this.bannerSub.textContent = subtitle || "";
+      this.banner.classList.remove("hidden");
+      // ریست انیمیشن پاپ حتی اگه پشت سر هم صدا زده بشه (مثلا دو آلتیمیت نزدیک به هم)
+      this.bannerTitle.style.animation = "none";
+      void this.bannerTitle.offsetWidth;
+      this.bannerTitle.style.animation = "";
+
+      if (duration > 0) {
+        this.bannerHideTimer = setTimeout(() => this.hideBanner(), duration);
+      }
+    }
+
+    hideBanner() {
+      clearTimeout(this.bannerHideTimer);
+      this.banner.classList.add("hidden");
     }
 
     slot(side) {
@@ -618,6 +684,7 @@ function playAnimationsForNewLog(log) {
       scene.slot("left").playAction("attack");
     } else if (line.includes("آلتیمیت شما روی این دشمن اثر نکرد")) {
       scene.slot("left").playAction("ultimate");
+      scene.showBanner("آلتیمیت!");
     } else if (line.startsWith("شما") && line.includes("ضربه زدید")) {
       scene.slot("left").playAction("attack");
       scene.slot("right").flashHit();
@@ -639,6 +706,7 @@ function playAnimationsForNewLog(log) {
     } else if (line.startsWith("شما آلتیمیت خود را زدید")) {
       scene.slot("left").playAction("ultimate");
       scene.slot("right").flashHit();
+      scene.showBanner("آلتیمیت!");
       scene.playSound("ultimate");
     } else if (line.startsWith("شما") && line.includes("دمیج تاخیری گرفتید")) {
       scene.slot("left").flashHit();
@@ -684,10 +752,22 @@ function renderLog(log) {
 function renderState(state) {
   renderScene(state);
   renderLog(state.log);
-  el("status").textContent = "نوبت شماست";
-  setActionButtonsDisabled(false);
   el("btn-retry").classList.add("hidden");
-  el("main-actions").classList.remove("hidden");
+
+  // این تابع از چند جای مختلف صدا زده میشه (شروع بازی، بعد از اکشن، بعد از انتخاب دوئل
+  // مرگ، حتی وقتی مساوی میشه) - پس خودش باید بر اساس isDeathDuel تصمیم بگیره کدوم
+  // دکمه‌ها دیده بشن، نه اینکه فرض کنه همیشه حالت عادیه (باگ قبلی همینجا بود)
+  if (state.isDeathDuel) {
+    el("status").textContent = "⚔️ دوئل مرگ! یکی رو انتخاب کن:";
+    el("main-actions").classList.add("hidden");
+    el("target-actions").classList.add("hidden");
+    el("death-duel-actions").classList.remove("hidden");
+  } else {
+    el("status").textContent = "نوبت شماست";
+    setActionButtonsDisabled(false);
+    el("main-actions").classList.remove("hidden");
+    el("death-duel-actions").classList.add("hidden");
+  }
 }
 
 function setActionButtonsDisabled(disabled) {
@@ -696,6 +776,7 @@ function setActionButtonsDisabled(disabled) {
 
 async function startMatch() {
   lastLogLength = 0;
+  scene.hideBanner();
   const data = await callApi("start", {});
   if (!data) return;
   matchId = data.matchId;
@@ -707,26 +788,24 @@ async function handleActionResult(data) {
   renderState(data.state);
 
   if (data.outcome === "death_duel_start") {
-    el("status").textContent = "⚔️ دوئل مرگ! یکی رو انتخاب کن:";
-    el("main-actions").classList.add("hidden");
-    el("target-actions").classList.add("hidden");
-    el("death-duel-actions").classList.remove("hidden");
+    // renderState بالا همین الان بر اساس state.isDeathDuel دکمه‌های درست رو نشون داده
     return;
   }
 
   if (data.outcome === "player_won") {
-    let msg = "🏆 شما بردید!";
+    let sub = "";
     if (data.reward) {
-      msg += ` (+${data.reward.fcGained} FC، +${data.reward.xpGained} XP`;
-      if (data.reward.bonusItem) msg += `، آیتم جایزه: ${data.reward.bonusItem}`;
-      msg += ")";
-      if (data.reward.levelUp?.leveledUp) msg += ` — لول شما به ${data.reward.levelUp.newLevel} رسید!`;
+      sub = `+${data.reward.fcGained} FC   +${data.reward.xpGained} XP`;
+      if (data.reward.bonusItem) sub += `   آیتم: ${data.reward.bonusItem}`;
+      if (data.reward.levelUp?.leveledUp) sub += `   لول ${data.reward.levelUp.newLevel}!`;
     }
-    el("status").textContent = msg;
+    scene.showBanner("🏆 پیروزی!", sub, 0); // 0 یعنی تا شروع بازی بعدی می‌مونه
+    el("status").textContent = "";
     scene.playSound("win");
     endMatchUi();
   } else if (data.outcome === "player_lost") {
-    el("status").textContent = "💀 شما باختید.";
+    scene.showBanner("💀 شکست!", "", 0);
+    el("status").textContent = "";
     scene.playSound("lose");
     endMatchUi();
   }
@@ -734,7 +813,7 @@ async function handleActionResult(data) {
 
 async function handleDeathDuelResult(data) {
   if (!data) return;
-  renderState(data.state);
+  renderState(data.state); // اگه مساوی شده بود، خودش دوباره فقط دکمه‌های دوئل مرگ رو نشون میده
 
   if (data.winner === null) {
     el("status").textContent = "مساوی شد! دوباره انتخاب کن.";
@@ -743,14 +822,14 @@ async function handleDeathDuelResult(data) {
 
   el("death-duel-actions").classList.add("hidden");
   if (data.winner === "player") {
-    let msg = "🏆 شما دوئل مرگ رو بردید!";
-    if (data.reward) {
-      msg += ` (+${data.reward.fcGained} FC، +${data.reward.xpGained} XP)`;
-    }
-    el("status").textContent = msg;
+    let sub = "";
+    if (data.reward) sub = `+${data.reward.fcGained} FC   +${data.reward.xpGained} XP`;
+    scene.showBanner("🏆 پیروزی!", sub, 0);
+    el("status").textContent = "";
     scene.playSound("win");
   } else {
-    el("status").textContent = "💀 شما دوئل مرگ رو باختید.";
+    scene.showBanner("💀 شکست!", "", 0);
+    el("status").textContent = "";
     scene.playSound("lose");
   }
   endMatchUi();
