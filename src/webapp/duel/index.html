@@ -449,6 +449,17 @@ window.GameAssets = {
         return;
       }
 
+      if (frames.length === 1) {
+        // فقط یه فریم داریم - همینو یه‌بار رندر کن و تمام. لوپ نکن، وگرنه چون هر بار
+        // عکس از DOM حذف و دوباره اضافه میشه (حتی با همون عکس قبلی)، باعث چشمک‌زدن/برق‌زدن
+        // مداوم کرکتر میشه. وقتی چند فریم واقعی اضافه کردی، خودکار انیمیشن واقعی پخش میشه.
+        this._renderFrame(frames[0], this.entry?.label, this.entry?.color);
+        if (action !== "idle") {
+          this.frameTimer = setTimeout(() => this.playAction("idle"), FRAME_DURATION_MS * ACTION_ANIMATION_ROUNDS);
+        }
+        return;
+      }
+
       this._cycleFrames(frames, action === "idle" ? Infinity : ACTION_ANIMATION_ROUNDS, () => {
         if (action !== "idle") this.playAction("idle");
       });
