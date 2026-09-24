@@ -556,7 +556,7 @@ window.GameAssets = {
     showBanner(title, subtitle, duration = 1300) {
       clearTimeout(this.bannerHideTimer);
       this.bannerTitle.textContent = title;
-      this.bannerSub.textContent = subtitle || "";
+      this.bannerSub.innerHTML = subtitle || ""; // subtitle می‌تونه چندخطی (با <br>) باشه
       this.banner.classList.remove("hidden");
       // ریست انیمیشن پاپ حتی اگه پشت سر هم صدا زده بشه (مثلا دو آلتیمیت نزدیک به هم)
       this.bannerTitle.style.animation = "none";
