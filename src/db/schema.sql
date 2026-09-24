@@ -101,6 +101,13 @@ CREATE TABLE IF NOT EXISTS registration_sessions (
   updated_at  INTEGER NOT NULL
 );
 
+-- ترتیب دقیق آخرین باری که هر کارمند /list زد - تا وقتی «حذف N» می‌نویسه بدونیم منظورش کیه
+CREATE TABLE IF NOT EXISTS staff_list_sessions (
+  staff_id       INTEGER PRIMARY KEY,
+  player_ids_json TEXT NOT NULL,
+  created_at     INTEGER NOT NULL
+);
+
 -- لاگ ضدِ اسپم - فقط تایم‌استمپ آخرین دستورهای هر کاربر برای شمارش پنجره زمانی
 CREATE TABLE IF NOT EXISTS command_log (
   id           INTEGER PRIMARY KEY AUTOINCREMENT,
