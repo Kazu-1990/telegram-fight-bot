@@ -10,6 +10,7 @@ import * as shop from "./commands/shop";
 import * as profile from "./commands/profile";
 import * as leaderboard from "./commands/leaderboard";
 import * as staff from "./commands/staff";
+import * as staffList from "./commands/staffList";
 import * as hint from "./commands/hint";
 import { normalizePersianText } from "./shared/text";
 
@@ -83,6 +84,12 @@ function buildBot(env: Env): Bot<Context> {
   bot.command("antistar", (ctx) => leaderboard.handleAntiStarCommand(ctx, db));
   bot.command("block", (ctx) => staff.handleBlockCommand(ctx, db));
   bot.command("unblock", (ctx) => staff.handleUnblockCommand(ctx, db));
+
+  // ---------- /list و حذف کامل بازیکن (فقط کارمند، فقط پیوی) ----------
+  bot.command("list", (ctx) => staffList.handleListCommand(ctx, db));
+  bot.on("message:text", (ctx, next) => staffList.handleDeleteByNumberStep(ctx, db, next));
+  bot.callbackQuery(/^staffdel_yes:\d+$/, (ctx) => staffList.handleDeleteConfirmCallback(ctx, db));
+  bot.callbackQuery("staffdel_no", (ctx) => staffList.handleDeleteCancelCallback(ctx));
 
   return bot;
 }
