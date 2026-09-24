@@ -556,7 +556,7 @@ window.GameAssets = {
     showBanner(title, subtitle, duration = 1300) {
       clearTimeout(this.bannerHideTimer);
       this.bannerTitle.textContent = title;
-      this.bannerSub.textContent = subtitle || "";
+      this.bannerSub.innerHTML = subtitle || ""; // subtitle می‌تونه چندخطی (با <br>) باشه
       this.banner.classList.remove("hidden");
       // ریست انیمیشن پاپ حتی اگه پشت سر هم صدا زده بشه (مثلا دو آلتیمیت نزدیک به هم)
       this.bannerTitle.style.animation = "none";
@@ -804,13 +804,14 @@ async function handleActionResult(data) {
   }
 
   if (data.outcome === "player_won") {
-    let sub = "";
+    const lines = [];
     if (data.reward) {
-      sub = `+${data.reward.fcGained} FC   +${data.reward.xpGained} XP`;
-      if (data.reward.bonusItem) sub += `   آیتم: ${data.reward.bonusItem}`;
-      if (data.reward.levelUp?.leveledUp) sub += `   لول ${data.reward.levelUp.newLevel}!`;
+      lines.push(`XP: +${data.reward.xpGained}`);
+      lines.push(`FC: +${data.reward.fcGained}`);
+      if (data.reward.bonusItem) lines.push(`Item: ${data.reward.bonusItem}`);
+      if (data.reward.levelUp?.leveledUp) lines.push(`Level Up: ${data.reward.levelUp.newLevel}`);
     }
-    scene.showBanner("🏆 پیروزی!", sub, 0); // 0 یعنی تا شروع بازی بعدی می‌مونه
+    scene.showBanner("🏆 پیروزی!", lines.join("<br>"), 0); // 0 یعنی تا شروع بازی بعدی می‌مونه
     el("status").textContent = "";
     scene.playSound("win");
     endMatchUi();
@@ -833,9 +834,14 @@ async function handleDeathDuelResult(data) {
 
   el("death-duel-actions").classList.add("hidden");
   if (data.winner === "player") {
-    let sub = "";
-    if (data.reward) sub = `+${data.reward.fcGained} FC   +${data.reward.xpGained} XP`;
-    scene.showBanner("🏆 پیروزی!", sub, 0);
+    const lines = [];
+    if (data.reward) {
+      lines.push(`XP: +${data.reward.xpGained}`);
+      lines.push(`FC: +${data.reward.fcGained}`);
+      if (data.reward.bonusItem) lines.push(`Item: ${data.reward.bonusItem}`);
+      if (data.reward.levelUp?.leveledUp) lines.push(`Level Up: ${data.reward.levelUp.newLevel}`);
+    }
+    scene.showBanner("🏆 پیروزی!", lines.join("<br>"), 0);
     el("status").textContent = "";
     scene.playSound("win");
   } else {
