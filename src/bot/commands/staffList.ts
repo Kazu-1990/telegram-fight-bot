@@ -64,7 +64,7 @@ export async function handleListCommand(ctx: Context, db: D1): Promise<void> {
   if (chunk) chunks.push(chunk);
 
   for (const part of chunks) {
-    await ctx.reply(part, { parse_mode: "HTML", link_preview_options: { is_disabled: true } });
+    await ctx.reply(part, { parse_mode: "HTML" });
   }
 }
 
