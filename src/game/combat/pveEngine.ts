@@ -1,5 +1,5 @@
 import type { FighterState, BodyPart, PlayerAction } from "../../types";
-import { ATTACK_DAMAGE, DEFENSE_REFLECT_DAMAGE, MANA_MAX } from "../../config/constants";
+import { ATTACK_DAMAGE, MANA_MAX } from "../../config/constants";
 import { getUltimateEffect } from "./ultimates";
 import { getWeaponDamageBonus } from "./equipment";
 import type { EnemyDefinition } from "../forest/enemies";
@@ -118,9 +118,10 @@ export function resolvePveRound(
 
   if (playerAction.action === "defense" && playerAction.target) {
     if (playerAction.target === cpuTarget) {
-      // دفاع درست: دمیج به دشمن برمیگرده، پلیر این راند آسیب نمیبینه
-      state.cpu.hp = clamp(state.cpu.hp - DEFENSE_REFLECT_DAMAGE, state.cpu.hpMax);
-      state.log.push(`شما حمله‌ی دشمن به ${cpuTarget} را دفاع کردید؛ ${DEFENSE_REFLECT_DAMAGE} دمیج به او برگشت.`);
+      // دفاع درست: همون مقدار دمیجی که اون ناحیه می‌داد، به دشمن برمیگرده، پلیر این راند آسیب نمیبینه
+      const reflectedToCpu = ATTACK_DAMAGE[cpuTarget];
+      state.cpu.hp = clamp(state.cpu.hp - reflectedToCpu, state.cpu.hpMax);
+      state.log.push(`شما حمله‌ی دشمن به ${cpuTarget} را دفاع کردید؛ ${reflectedToCpu} دمیج به او برگشت.`);
 
       // اگه شبح بود و هنوز غیرقابل‌ضربه بود، از این لحظه قابل مبارزه میشه
       if (!state.cpu.isVulnerable) {
@@ -136,7 +137,7 @@ export function resolvePveRound(
     if (!state.cpu.isVulnerable) {
       state.log.push("این دشمن هنوز قابل ضربه زدن نیست.");
     } else if (rollCpuDefends(state.cpu, playerAction.target)) {
-      const reflected = DEFENSE_REFLECT_DAMAGE;
+      const reflected = ATTACK_DAMAGE[playerAction.target];
       state.player.hp = clamp(state.player.hp - reflected, state.player.hpMax);
       state.log.push(`دشمن حمله‌ی شما به ${playerAction.target} را دفع کرد؛ ${reflected} دمیج به شما برگشت.`);
     } else {
