@@ -399,6 +399,10 @@ window.GameAssets = {
     }
 
     setCharacter(kind, key, label) {
+      // اگه همون کرکتر قبلیه، هیچ کاری نکن - وگرنه هر بار (حتی فقط برای آپدیت HP/مانا)
+      // عکس از نو ساخته میشه و یه فلاش خاکستری (لحظه‌ی decode مرورگر) دیده میشه
+      if (this.kind === kind && this.key === key) return;
+
       this.entry = getAssetEntry(kind, key);
       this.kind = kind;
       this.key = key;
@@ -411,11 +415,16 @@ window.GameAssets = {
     }
 
     setGear(armorKey, weaponKey) {
-      this._setGearBox(this.armorBox, armorKey);
-      this._setGearBox(this.weaponBox, weaponKey);
+      this._setGearBox(this.armorBox, "armor", armorKey);
+      this._setGearBox(this.weaponBox, "weapon", weaponKey);
     }
 
-    _setGearBox(box, key) {
+    _setGearBox(box, slotName, key) {
+      // اگه همون آیتم قبلیه، دست نزن - وگرنه هر رندر دوباره ساخته میشه و فلاش میده
+      const lastKeyProp = "_lastKey_" + slotName;
+      if (this[lastKeyProp] === key) return;
+      this[lastKeyProp] = key;
+
       box.innerHTML = "";
       if (!key) {
         box.classList.add("bs-gear-empty");
