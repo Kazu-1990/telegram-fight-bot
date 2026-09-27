@@ -6,7 +6,6 @@ import {
   MANA_REGEN_PER_ROUND,
   MANA_PER_ROUND_AFTER_FIRST_ULTIMATE,
   ATTACK_DAMAGE,
-  DEFENSE_REFLECT_DAMAGE,
   MAX_POTION_USES_PER_MATCH,
   MAX_ULTIMATE_USES_PER_MATCH,
   ULTIMATES,
@@ -180,8 +179,8 @@ function resolveOffensiveAction(state: CombatState, actor: FighterState, other: 
   if (act.action === "attack" && act.target) {
     const otherDefends = other.pendingAction?.action === "defense" && other.pendingAction.target === act.target;
     if (otherDefends) {
-      // دفاع درست: دمیج به حمله‌کننده برمیگرده
-      const dmg = applyDamage(actor, DEFENSE_REFLECT_DAMAGE, null);
+      // دفاع درست: همون مقدار دمیجی که اون ناحیه می‌داد، به حمله‌کننده برمیگرده
+      const dmg = applyDamage(actor, ATTACK_DAMAGE[act.target], null);
       state.log.push(`مبارز ${other.id} حمله به ${act.target} را دفاع کرد؛ ${dmg} دمیج به مبارز ${actor.id} برگشت.`);
     } else {
       const base = ATTACK_DAMAGE[act.target] + weaponBonusFor(actor);
