@@ -19,7 +19,7 @@ export function isStaff(userId: number): boolean {
 }
 
 // نام کاربری بات (بدون @) - برای ساخت دیپ‌لینک فعال‌سازی گروه لازمه
-export const BOT_USERNAME = "Fight_castlevania_bot";
+export const BOT_USERNAME = "@Fight_castlevania_bot";
 
 // ---------- ضد اسپم ----------
 // فرض منطقی: اگه یه کاربر توی بازه‌ی زمانی کوتاه، تعداد دستور مشخصی بفرسته، اسپمر شناخته میشه
@@ -45,9 +45,6 @@ export const ATTACK_DAMAGE = {
   body: 20,
   leg: 15,
 } as const;
-
-// دمیجی که با دفاع موفق به حریف برمی‌گرده
-export const DEFENSE_REFLECT_DAMAGE = 20;
 
 // محدودیت پوشن در نبرد PvP/PvE-duel-like (نه forest/dungeon)
 export const MAX_POTION_USES_PER_MATCH = 2;
@@ -159,9 +156,8 @@ export const FOREST_ENEMY_SPAWN_RATES = {
   bear: 0.15,
 };
 export const FOREST_REWARD_TIERS = [
-  { chance: 0.80, fc: 3, xp: 5 },
-  { chance: 0.15, fc: 5, xp: 8 },
-  { chance: 0.05, fc: 7, xp: 10 },
+  { chance: 0.90, fc: 1, xp: 5 },
+  { chance: 0.10, fc: 2, xp: 5 },
 ];
 // هر ۵ برد پشت‌سرهم/تجمعی، یکی از این آیتم‌ها به احتمال برابر
 export const FOREST_BONUS_ITEMS_EVERY_N_WINS = 5;
@@ -184,10 +180,9 @@ export const DUNGEON_ENEMY_SPAWN_RATES = {
   demon: 0.10,
 };
 export const DUNGEON_REWARD_TIERS = [
-  { chance: 0.60, fc: 10, xp: 15 },
-  { chance: 0.30, fc: 12, xp: 18 },
-  { chance: 0.09, fc: 15, xp: 20 },
-  { chance: 0.01, fc: 20, xp: 30 },
+  { chance: 0.70, fc: 3, xp: 10 },
+  { chance: 0.20, fc: 4, xp: 10 },
+  { chance: 0.10, fc: 5, xp: 12 },
 ];
 export const DUNGEON_BONUS_ITEMS_EVERY_N_WINS = 5;
 export const DUNGEON_BONUS_ITEMS: ResourceKey[] = [
