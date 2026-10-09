@@ -58,6 +58,7 @@ function buildBot(env: Env): Bot<Context> {
   bot.command("duel", (ctx) => duel.handleDuelCommand(ctx, db));
   bot.callbackQuery(/^duel_join:\d+$/, (ctx) => duel.handleDuelJoinCallback(ctx, db));
   bot.callbackQuery(/^duel_cancel:\d+$/, (ctx) => duel.handleDuelCancelCallback(ctx, db));
+  bot.callbackQuery(/^duel_watch:\d+$/, (ctx) => duel.handleDuelWatchCallback(ctx, db));
 
   // ---------- forest / dungeon / shop / profile / hint ----------
   bot.command("forest", (ctx) => forest.handleForestCommand(ctx, db));
