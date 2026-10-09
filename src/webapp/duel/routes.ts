@@ -1,5 +1,11 @@
 import { verifyTelegramWebAppInitData } from "../shared/telegramAuth";
-import { getDuelStateForUser, submitDuelAction, useDuelPotion, submitDuelDeathDuelChoice } from "./api";
+import {
+  getDuelStateForUser,
+  getDuelStateForSpectator,
+  submitDuelAction,
+  useDuelPotion,
+  submitDuelDeathDuelChoice,
+} from "./api";
 import { closeDuelMatch } from "../../bot/commands/duel";
 
 type D1 = any;
@@ -50,6 +56,12 @@ export async function handleDuelApiRequest(request: Request, env: DuelApiEnv, pa
   switch (path) {
     case "state": {
       const result = await getDuelStateForUser(env.DB, matchId, userId);
+      return "error" in result ? json(result, 400) : json(result);
+    }
+
+    // تماشاچی‌ها (کسی که حریف نیست) - فقط نمایش، بدون امکان ثبت اکشن
+    case "spectate": {
+      const result = await getDuelStateForSpectator(env.DB, matchId);
       return "error" in result ? json(result, 400) : json(result);
     }
 
