@@ -6,7 +6,15 @@
 <title>شاپ</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
-  body { font-family: sans-serif; background: #1a1410; color: #eee; padding: 12px; margin: 0; }
+  body { font-family: sans-serif; background: #1a1410; color: #eee; padding: 12px; margin: 0;
+  -webkit-tap-highlight-color: transparent; /* حذف فلاش آبی هنگام لمس */
+}
+button, .tabs button, [role="button"] {
+  -webkit-touch-callout: none;   /* جلوگیری از منوی کپی/انتخاب موقع نگه‌داشتن */
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;    /* جلوگیری از تاخیر دابل‌تپ و زوم ناخواسته */
+}
   .tabs { display: flex; gap: 6px; margin-bottom: 14px; }
   .tabs button {
     flex: 1;
