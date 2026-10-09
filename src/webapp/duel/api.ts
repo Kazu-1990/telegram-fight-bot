@@ -31,15 +31,17 @@ export interface RedactedFighter extends Omit<FighterState, "pendingAction"> {
 export interface RedactedCombatState extends Omit<CombatState, "fighters"> {
   fighters: [RedactedFighter, RedactedFighter];
   yourIndex: 0 | 1;
+  isSpectator?: boolean; // تماشاچی - دکمه‌های اکشن سمت کلاینت نباید نشون داده بشن
 }
 
-function redact(state: CombatState, viewerIndex: 0 | 1): RedactedCombatState {
+// viewerIndex=null یعنی تماشاچی (نه یکی از دو حریف) - yourIndex صرفاً برای چپ/راست نمایش ثابت می‌مونه روی 0
+function redact(state: CombatState, viewerIndex: 0 | 1 | null): RedactedCombatState {
   const fighters = state.fighters.map((f) => {
     const { pendingAction, ...rest } = f;
     return { ...rest, hasSubmittedAction: pendingAction !== null };
   }) as [RedactedFighter, RedactedFighter];
 
-  return { ...state, fighters, yourIndex: viewerIndex };
+  return { ...state, fighters, yourIndex: viewerIndex ?? 0, isSpectator: viewerIndex === null };
 }
 
 async function loadMatchAndIndex(
@@ -69,6 +71,14 @@ export async function getDuelStateForUser(db: D1, matchId: number, userId: numbe
   const loaded = await loadMatchAndIndex(db, matchId, userId);
   if (isApiError(loaded)) return loaded;
   return redact(loaded.state, loaded.fighterIndex);
+}
+
+// ---------- GET - نسخه‌ی فقط-نمایش برای تماشاچی‌ها (هرکسی، نه فقط دو حریف) ----------
+export async function getDuelStateForSpectator(db: D1, matchId: number): Promise<RedactedCombatState | ApiError> {
+  const match = await getMatch(db, matchId);
+  if (!match || match.type !== "duel") return { error: "مبارزه پیدا نشد." };
+  if (!match.state) return { error: "وضعیت بازی هنوز آماده نشده." };
+  return redact(match.state, null);
 }
 
 // ---------- POST - ثبت اکشن اصلی راند ----------
