@@ -42,6 +42,17 @@ function pvDuelKeyboard(matchId: number): InlineKeyboard {
   return new InlineKeyboard().webApp("🎮 ادامه در مینی‌اپ", url);
 }
 
+// دکمه‌ی دعوت تماشاچی‌ها توی گروه - web_app توی گروه مجاز نیست، پس این یه دکمه‌ی معمولیه
+// که با کلیک، لینک واقعی مینی‌اپ (حالت تماشا) رو توی پیوی خودِ کلیک‌کننده می‌فرسته
+function spectatorInviteKeyboard(matchId: number): InlineKeyboard {
+  return new InlineKeyboard().text("👀 تماشای زنده", `duel_watch:${matchId}`);
+}
+
+function pvSpectatorKeyboard(matchId: number): InlineKeyboard {
+  const url = `${WEBAPP_BASE_URL}${WEBAPP_PATHS.duel}?matchId=${matchId}&spectate=1`;
+  return new InlineKeyboard().webApp("🎥 مشاهده‌ی زنده", url);
+}
+
 // ---------- /duel (فقط کارمند مجاز به شروع کردن این دستوره) ----------
 export async function handleDuelCommand(ctx: Context, db: D1): Promise<void> {
   if (!isGroupChat(ctx)) {
@@ -163,6 +174,34 @@ export async function handleDuelJoinCallback(ctx: Context, db: D1): Promise<void
       // اگه کسی هیچوقت پیوی ربات رو استارت نکرده باشه، پیام نمیره - این یعنی باید اول ثبت‌نام میشد
       // (که طبق منطق بازی نباید پیش بیاد، چون ورود به duel نیاز به ثبت‌نام قبلی داره)
     }
+  }
+
+  // دعوت حضار گروه به تماشای زنده - یه پیام جدا، چون پیام اصلی دیگه دکمه‌ی کنسل داره
+  await ctx.reply(`🎥 مبارزه‌ی ${p1.name} و ${p2.name} به‌صورت زنده قابل تماشاست!`, {
+    reply_markup: spectatorInviteKeyboard(matchId),
+  });
+}
+
+// ---------- دکمه‌ی «تماشای زنده» (هرکسی توی گروه می‌تونه بزنه) ----------
+export async function handleDuelWatchCallback(ctx: Context, db: D1): Promise<void> {
+  const matchId = Number(ctx.callbackQuery!.data!.split(":")[1]);
+  const match = await getMatch(db, matchId);
+
+  if (!match || !match.state) {
+    await ctx.answerCallbackQuery({ text: "این مبارزه دیگه در دسترس نیست." });
+    return;
+  }
+
+  try {
+    await ctx.api.sendMessage(ctx.from!.id, "👀 برای تماشای زنده‌ی این مبارزه روی دکمه بزن:", {
+      reply_markup: pvSpectatorKeyboard(matchId),
+    });
+    await ctx.answerCallbackQuery({ text: "به پیوی‌تون پیام دادم، اونجا رو چک کنید." });
+  } catch {
+    await ctx.answerCallbackQuery({
+      text: "اول باید یک‌بار در پیوی ربات /start بزنید تا بتونم بهتون پیام بدم.",
+      show_alert: true,
+    });
   }
 }
 
