@@ -613,6 +613,26 @@ window.GameAssets = {
         // نادیده بگیر - صدا اختیاریه
       }
     }
+
+    // موزیک پس‌زمینه (مثلاً دوئل) - جدا از playSound چون باید لوپ بشه و قابل قطع‌شدن باشه
+    playMusic(url, volume = 0.35) {
+      this.stopMusic();
+      try {
+        this.musicAudio = new Audio(url);
+        this.musicAudio.loop = true;
+        this.musicAudio.volume = volume;
+        this.musicAudio.play().catch(() => {}); // اگه فایل نبود یا مرورگر اجازه نداد، بی‌سروصدا رد شو
+      } catch {
+        // نادیده بگیر - موزیک اختیاریه
+      }
+    }
+
+    stopMusic() {
+      if (this.musicAudio) {
+        try { this.musicAudio.pause(); } catch {}
+        this.musicAudio = null;
+      }
+    }
   }
 
   window.BattleScene = BattleScene;
@@ -722,6 +742,7 @@ let spectatorBannerShown = false;
 
 const scene = new BattleScene(document.getElementById("scene"));
 scene.setBackground("duel");
+scene.playMusic("https://raw.githubusercontent.com/Kazu-1990/telegram-fight-bot/main/assets/music/duel.mp3");
 
 if (isSpectator) {
   // تماشاچی از همون اول هیچ دکمه‌ی اکشنی نباید ببینه، حتی قبل از اولین جواب API
@@ -810,7 +831,9 @@ function renderFighterVisual(side, fighter) {
 }
 
 function renderLog(log) {
-  el("log").innerHTML = (log ?? []).slice(-15).map((l) => `<div>${l}</div>`).join("");
+  const logEl = el("log");
+  logEl.innerHTML = (log ?? []).slice(-15).map((l) => `<div>${l}</div>`).join("");
+  logEl.scrollTop = logEl.scrollHeight; // همیشه پایین‌ترین (جدیدترین) خط رو نشون بده
 }
 
 function renderState(state) {
@@ -840,6 +863,7 @@ function renderState(state) {
       const winner = f0dead ? enemy : you;
       el("status").textContent = "";
       scene.showBanner(`🏆 ${winner.name ?? "برنده"} برد!`, "", 0);
+      scene.stopMusic();
       scene.playSound("win");
     } else if (!spectatorBannerShown) {
       el("status").textContent = state.isDeathDuel ? "👀 دوئل مرگ! در حال تماشا..." : "👀 در حال تماشای زنده";
@@ -880,6 +904,7 @@ async function handleOutcome(data) {
     const youWon = data.state.fighters[data.outcome.winnerIndex].id === data.state.fighters[data.state.yourIndex].id;
     scene.showBanner(youWon ? "🏆 پیروزی!" : "💀 شکست!", "", 0); // 0 یعنی تا شروع بازی بعدی می‌مونه
     el("status").textContent = "";
+    scene.stopMusic();
     scene.playSound(youWon ? "win" : "lose");
     setActionButtonsDisabled(true);
     el("death-duel-actions").classList.add("hidden");
