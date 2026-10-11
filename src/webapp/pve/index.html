@@ -613,6 +613,26 @@ window.GameAssets = {
         // نادیده بگیر - صدا اختیاریه
       }
     }
+
+    // موزیک پس‌زمینه (مثلاً دوئل) - جدا از playSound چون باید لوپ بشه و قابل قطع‌شدن باشه
+    playMusic(url, volume = 0.35) {
+      this.stopMusic();
+      try {
+        this.musicAudio = new Audio(url);
+        this.musicAudio.loop = true;
+        this.musicAudio.volume = volume;
+        this.musicAudio.play().catch(() => {}); // اگه فایل نبود یا مرورگر اجازه نداد، بی‌سروصدا رد شو
+      } catch {
+        // نادیده بگیر - موزیک اختیاریه
+      }
+    }
+
+    stopMusic() {
+      if (this.musicAudio) {
+        try { this.musicAudio.pause(); } catch {}
+        this.musicAudio = null;
+      }
+    }
   }
 
   window.BattleScene = BattleScene;
@@ -802,7 +822,9 @@ function renderScene(state) {
 }
 
 function renderLog(log) {
-  el("log").innerHTML = (log ?? []).slice(-15).map((l) => `<div>${l}</div>`).join("");
+  const logEl = el("log");
+  logEl.innerHTML = (log ?? []).slice(-15).map((l) => `<div>${l}</div>`).join("");
+  logEl.scrollTop = logEl.scrollHeight; // همیشه پایین‌ترین (جدیدترین) خط رو نشون بده
 }
 
 function renderState(state) {
